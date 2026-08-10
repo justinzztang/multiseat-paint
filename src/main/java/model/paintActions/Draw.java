@@ -3,9 +3,9 @@ package model.paintActions;
 import model.Canvas;
 
 /**
- * Action that indicates a user has begun a stroke, by clicking down with the paint tool
+ * Action that indicates a user is drawing on the canvas,
  */
-public class BeginStroke implements Action, Undoable {
+public class Draw implements Action, Undoable {
     private int x;
     private int y;
     private UndoStatus status;
@@ -17,7 +17,7 @@ public class BeginStroke implements Action, Undoable {
 
     @Override
     public void apply(Canvas canvas) {
-        System.out.println("applied BeginStroke");
+        System.out.println("applied Draw");
     }
 
     @Override
