@@ -25,11 +25,16 @@ public class CanvasTest {
 
     @Test
     public void basicColoring(){
-        CanvasImpl c = new CanvasImpl(1);
+        CanvasImpl c = new CanvasImpl(1, 15, 15);
         assertEquals(Color.white, c.getColor(0,0));
 
         c.setPixel(10,10, 123, 45, 67, 89);
         assertEquals(new Color(123, 45, 67, 89), c.getColor(10,10));
+        assertEquals(Color.white, c.getColor(11,10));
+        assertEquals(Color.white, c.getColor(9,10));
+        assertEquals(Color.white, c.getColor(10,11));
+        assertEquals(Color.white, c.getColor(10,9));
+
 
     }
 }
