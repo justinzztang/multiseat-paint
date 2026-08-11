@@ -8,16 +8,25 @@ import model.Canvas;
 public class Draw implements PaintAction, Undoable {
     private int x;
     private int y;
+    private int id;
     private UndoStatus status = UndoStatus.DONE;
+
+    public Draw(int x, int y, int id){
+        this.x = x;
+        this.y = y;
+        this.id = id;
+    }
 
     @Override
     public int getUserID() {
-        return 0;
+        return id;
     }
 
     @Override
     public void apply(Canvas canvas) {
+        if(status != UndoStatus.DONE) return;
         System.out.println("applied Draw");
+        canvas.setPixel(x,y,0,0,0,255); //TODO temporary values
     }
 
     @Override

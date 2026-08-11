@@ -1,11 +1,14 @@
 package model.controlActions;
 
 import model.Canvas;
+import model.MemorySmartCanvas;
 import model.helpers.ActionPointTracker;
 import model.paintActions.PaintAction;
 import model.paintActions.Undoable;
 
+import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class Undo implements ControlAction{
     private int userID;
@@ -20,7 +23,8 @@ public class Undo implements ControlAction{
     }
 
     @Override
-    public boolean runAction(Canvas canvas, ArrayList<PaintAction> timeline, ActionPointTracker<Integer> apt) {
+    public boolean runAction(MemorySmartCanvas canvas, HashMap<Integer,Integer> pointToCanvasLayer,
+                             ArrayList<PaintAction> timeline, ActionPointTracker<Integer> apt, int lcc) {
         try{
             int jumpIndex = apt.getLatestUndoPoint();
             apt.undoUpdate();
@@ -34,6 +38,12 @@ public class Undo implements ControlAction{
             }
 
             //resimulate the canvas
+            //canvas.setLayer(LAST COMMON CANVAS)
+
+            canvas.setLayer(canvas.getLayerCopy(pointToCanvasLayer.get(lcc))); //TODO bug: this should be LCC
+            for(int i=lcc; i<timeline.size();i++){
+                timeline.get(i).apply(canvas);
+            }
 
             return true; //successfully undid
 

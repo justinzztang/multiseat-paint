@@ -19,6 +19,19 @@ public class ActionPointTracker<E> {
     //redo points in the future
     private Stack<E> availableRedos = new Stack<>();
 
+    public boolean unavailableUndosEmpty(){
+        return unavailableUndos.isEmpty();
+    }
+    public boolean availableUndosEmpty(){
+        return availableUndos.isEmpty();
+    }
+    public boolean unavailableRedosEmpty(){
+        return unavailableRedos.isEmpty();
+    }
+    public boolean availableRedosEmpty(){
+        return availableRedos.isEmpty();
+    }
+
     public E getLatestUndoPoint() throws Exception {
         if(availableUndos.isEmpty()){
             throw new Exception("no available undos");
@@ -26,11 +39,26 @@ public class ActionPointTracker<E> {
         return availableUndos.peek();
     }
 
+    public E getEarliestUnavailableUndoPoint() throws Exception {
+        if(unavailableUndos.isEmpty()){
+            throw new Exception("no unavailable undos");
+        }
+        return unavailableUndos.peek();
+    }
+
+
     public E getEarliestRedoPoint() throws Exception {
         if(availableRedos.isEmpty()){
             throw new Exception("no available redos");
         }
         return availableRedos.peek();
+    }
+
+    public E getLatestUnavailableRedoPoint() throws Exception {
+        if(unavailableRedos.isEmpty()){
+            throw new Exception("no unavailable redos");
+        }
+        return unavailableRedos.peek();
     }
 
 

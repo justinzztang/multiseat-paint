@@ -17,6 +17,7 @@ public class EndStroke implements PaintAction, Undoable {
 
     @Override
     public void apply(Canvas canvas) {
+        if(status != UndoStatus.DONE) return;
         System.out.println("applied EndStroke");
     }
 

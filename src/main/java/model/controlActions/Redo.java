@@ -1,11 +1,13 @@
 package model.controlActions;
 
 import model.Canvas;
+import model.MemorySmartCanvas;
 import model.helpers.ActionPointTracker;
 import model.paintActions.PaintAction;
 import model.paintActions.Undoable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class Redo implements ControlAction{
     private int userID;
@@ -20,7 +22,8 @@ public class Redo implements ControlAction{
     }
 
     @Override
-    public boolean runAction(Canvas canvas, ArrayList<PaintAction> timeline, ActionPointTracker<Integer> apt) {
+    public boolean runAction(MemorySmartCanvas canvas, HashMap<Integer,Integer> pointToCanvasLayer,
+                             ArrayList<PaintAction> timeline, ActionPointTracker<Integer> apt, int lcc) {
         try{
             int jumpIndex = apt.getEarliestRedoPoint();
             apt.redoUpdate();
@@ -32,7 +35,15 @@ public class Redo implements ControlAction{
                     ((Undoable)timeline.get(i)).setUndoStatus(Undoable.UndoStatus.DONE);
                 }
             }
+
             //update canvas
+            canvas.setLayer(canvas.getLayerCopy(pointToCanvasLayer.get(lcc))); //TODO bug: this should be LCC
+            for(int i=lcc; i<=jumpIndex;i++){
+                timeline.get(i).apply(canvas);
+            }
+
+
+
             return true; //successful
         } catch(Exception e){
             //theres no more redos, so do nothing

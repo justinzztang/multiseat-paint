@@ -13,7 +13,8 @@ public interface Undoable {
 
     enum UndoStatus{
         DONE,
-        UNDONE
+        UNDONE,
+        OVERWRITTEN
     }
 
     PointType getPointType();
