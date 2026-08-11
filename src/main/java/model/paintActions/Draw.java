@@ -21,6 +21,11 @@ public class Draw implements PaintAction, Undoable {
     }
 
     @Override
+    public PointType getPointType() {
+        return PointType.INBETWEEN;
+    }
+
+    @Override
     public void setUndoStatus(UndoStatus status) {
         this.status = status;
     }

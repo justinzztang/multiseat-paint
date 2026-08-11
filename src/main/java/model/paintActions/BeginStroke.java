@@ -21,6 +21,11 @@ public class BeginStroke implements PaintAction, Undoable {
     }
 
     @Override
+    public PointType getPointType() {
+        return PointType.UNDOPOINT;
+    }
+
+    @Override
     public void setUndoStatus(UndoStatus status) {
         this.status = status;
     }

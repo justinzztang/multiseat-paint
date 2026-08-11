@@ -5,10 +5,18 @@ package model.paintActions;
  */
 public interface Undoable {
 
+    enum PointType{
+        UNDOPOINT,
+        REDOPOINT,
+        INBETWEEN
+    }
+
     enum UndoStatus{
         DONE,
         UNDONE
     }
+
+    PointType getPointType();
 
     void setUndoStatus(UndoStatus status);
 

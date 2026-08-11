@@ -21,6 +21,11 @@ public class EndStroke implements PaintAction, Undoable {
     }
 
     @Override
+    public PointType getPointType() {
+        return PointType.REDOPOINT;
+    }
+
+    @Override
     public void setUndoStatus(UndoStatus status) {
         this.status = status;
     }
