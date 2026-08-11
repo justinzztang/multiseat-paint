@@ -5,10 +5,10 @@ import model.Canvas;
 /**
  * Action that indicates a user has ended a stroke, by ending their click while using the paint tool
  */
-public class EndStroke implements Action, Undoable {
+public class EndStroke implements PaintAction, Undoable {
     private int x;
     private int y;
-    private UndoStatus status;
+    private UndoStatus status = UndoStatus.DONE;
 
     @Override
     public int getUserID() {
@@ -27,6 +27,6 @@ public class EndStroke implements Action, Undoable {
 
     @Override
     public UndoStatus getUndoStatus() {
-        return null;
+        return status;
     }
 }

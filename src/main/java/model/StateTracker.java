@@ -1,11 +1,13 @@
 package model;
 
+import model.controlActions.ControlAction;
+import model.controlActions.Redo;
+import model.controlActions.Undo;
 import model.helpers.ActionPointTracker;
 import model.paintActions.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Stack;
 
 /**
  * Tracks and handles actions and canvas states, allowing undoing/redoing functionality
@@ -22,36 +24,43 @@ public class StateTracker {
 
 
     /** ArrayList containing user actions in sequence */
-    private ArrayList<Action> timeline = new ArrayList<>();
+    private ArrayList<PaintAction> timeline = new ArrayList<>();
 
     /** Stores each player's undo data */
     private HashMap<Integer, ActionPointTracker<Integer>> actionPointTracker = new HashMap<>();
-
-    /** ArrayList tracking previous canvas states for undoing/redoing */
-    private ArrayList<Canvas> canvasList = new ArrayList<>();
 
     public StateTracker(int id, Canvas canvas){
         this.id = id;
         this.canvas = canvas;
     }
 
+    //receive action that isnt something you apply to the canvas, like undos
+    public void receiveControlAction(ControlAction controlAction){
 
+        //create if not initialized
+        if(!actionPointTracker.containsKey(controlAction.getUserID())){
+            actionPointTracker.put(controlAction.getUserID(), new ActionPointTracker<>());
+        }
+        ActionPointTracker<Integer> apt = actionPointTracker.get(controlAction.getUserID());
 
+        controlAction.runAction(canvas, timeline, apt);
+
+    }
 
     //receive a concrete action that affects the canvas
-    public void receiveAction(Action action){
+    public void receiveAction(PaintAction paintAction){
 
         //create if not existant
-        if(!actionPointTracker.containsKey(action.getUserID())){
-            actionPointTracker.put(action.getUserID(), new ActionPointTracker<>());
+        if(!actionPointTracker.containsKey(paintAction.getUserID())){
+            actionPointTracker.put(paintAction.getUserID(), new ActionPointTracker<>());
         }
 
         //store it in the timeline
-        timeline.add(action);
+        timeline.add(paintAction);
         int timelineIndex = timeline.size() - 1;
         //if undoable, track the undo stuff
-        if(action instanceof Undoable undoable){
-            ActionPointTracker<Integer> apt = actionPointTracker.get(action.getUserID());
+        if(paintAction instanceof Undoable undoable){
+            ActionPointTracker<Integer> apt = actionPointTracker.get(paintAction.getUserID());
             //need more robust way to check if something is an undopoint or redopoint
             if(undoable instanceof BeginStroke){
                 apt.addUndo(timelineIndex);
@@ -61,7 +70,7 @@ public class StateTracker {
             }
         }
         //apply the action
-        action.apply(canvas);
+        paintAction.apply(canvas);
     }
 
 

@@ -5,10 +5,10 @@ import model.Canvas;
 /**
  * Action that indicates a user has begun a stroke, by clicking down with the paint tool
  */
-public class BeginStroke implements Action, Undoable {
+public class BeginStroke implements PaintAction, Undoable {
     private int x;
     private int y;
-    private UndoStatus status;
+    private UndoStatus status = UndoStatus.DONE;
 
     @Override
     public int getUserID() {
@@ -27,6 +27,6 @@ public class BeginStroke implements Action, Undoable {
 
     @Override
     public UndoStatus getUndoStatus() {
-        return null;
+        return status;
     }
 }

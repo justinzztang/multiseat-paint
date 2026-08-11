@@ -5,7 +5,7 @@ import model.Canvas;
 /**
  * Interface that represents a user action
  */
-public interface Action {
+public interface PaintAction {
 
     /** @return the ID of the user associated with this action */
     int getUserID();

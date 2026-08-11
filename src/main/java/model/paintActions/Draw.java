@@ -5,10 +5,10 @@ import model.Canvas;
 /**
  * Action that indicates a user is drawing on the canvas,
  */
-public class Draw implements Action, Undoable {
+public class Draw implements PaintAction, Undoable {
     private int x;
     private int y;
-    private UndoStatus status;
+    private UndoStatus status = UndoStatus.DONE;
 
     @Override
     public int getUserID() {
@@ -27,6 +27,6 @@ public class Draw implements Action, Undoable {
 
     @Override
     public UndoStatus getUndoStatus() {
-        return null;
+        return status;
     }
 }
