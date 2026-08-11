@@ -8,7 +8,15 @@ import model.Canvas;
 public class EndStroke implements PaintAction, Undoable {
     private int x;
     private int y;
+    private int id;
     private UndoStatus status = UndoStatus.DONE;
+
+    public EndStroke(int x, int y, int id){
+        this.x = x;
+        this.y = y;
+        this.id = id;
+    }
+
 
     @Override
     public int getUserID() {
