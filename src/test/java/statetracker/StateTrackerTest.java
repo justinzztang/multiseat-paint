@@ -19,8 +19,8 @@ public class StateTrackerTest {
     @Test
     public void paintActionTests(){
        StateTracker st = new StateTracker(0, new MemorySmartCanvas(0,10,10));
-        st.receivePaintAction(new BeginStroke());
-        st.receivePaintAction(new Draw(1,1,0));
-        st.receivePaintAction(new EndStroke());
+        st.receivePaintAction(new BeginStroke(1,1,0));
+        st.receivePaintAction(new Draw(1,1,1,1,0));
+        st.receivePaintAction(new EndStroke(1,1,0));
     }
 }

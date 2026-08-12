@@ -26,6 +26,7 @@ public class BeginStroke implements PaintAction, Undoable {
     @Override
     public void apply(Canvas canvas) {
         if(status != UndoStatus.DONE) return;
+        canvas.setPixel(x,y,0,0,0,255); //TODO temporary values
         System.out.println("applied BeginStroke");
     }
 

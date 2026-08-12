@@ -40,7 +40,7 @@ public class Undo implements ControlAction{
             //resimulate the canvas
             //canvas.setLayer(LAST COMMON CANVAS)
 
-            canvas.setLayer(canvas.getLayerCopy(pointToCanvasLayer.get(lcc))); //TODO bug: this should be LCC
+            canvas.setLayer(canvas.getLayerCopy(pointToCanvasLayer.get(lcc)));
             for(int i=lcc; i<timeline.size();i++){
                 timeline.get(i).apply(canvas);
             }

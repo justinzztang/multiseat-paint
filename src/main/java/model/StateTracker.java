@@ -115,6 +115,7 @@ public class StateTracker {
         }
         //apply the action
         paintAction.apply(canvas);
+
     }
 
 

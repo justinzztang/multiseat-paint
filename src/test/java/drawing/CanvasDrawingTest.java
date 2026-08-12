@@ -18,9 +18,9 @@ public class CanvasDrawingTest {
     public void drawThenUndoRedo(){
         MemorySmartCanvas canvas = new MemorySmartCanvas(1, 5, 5);
         StateTracker stateTracker = new StateTracker(1, canvas);
-        stateTracker.receivePaintAction(new BeginStroke());
-        stateTracker.receivePaintAction(new Draw(1,1,0));
-        stateTracker.receivePaintAction(new EndStroke());
+        stateTracker.receivePaintAction(new BeginStroke(1,1,0));
+        stateTracker.receivePaintAction(new Draw(1,1,1,1,0));
+        stateTracker.receivePaintAction(new EndStroke(1,1,0));
 
         assertEquals(new Color(0,0,0,255), canvas.getColor(1,1)); //TODO temp color
 
@@ -36,9 +36,9 @@ public class CanvasDrawingTest {
 
         assertEquals(Color.white, canvas.getColor(1,1));
 
-        stateTracker.receivePaintAction(new BeginStroke());
-        stateTracker.receivePaintAction(new Draw(1,1,0));
-        stateTracker.receivePaintAction(new EndStroke());
+        stateTracker.receivePaintAction(new BeginStroke(1,1,0));
+        stateTracker.receivePaintAction(new Draw(1,1,1,1,0));
+        stateTracker.receivePaintAction(new EndStroke(1,1,0));
 
     }
 
