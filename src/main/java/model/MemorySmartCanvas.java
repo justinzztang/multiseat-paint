@@ -1,5 +1,7 @@
 package model;
 
+import model.constants.CanvasConstants;
+
 import java.awt.*;
 import java.util.ArrayList;
 
@@ -9,15 +11,15 @@ public class MemorySmartCanvas implements Canvas{
     private ArrayList<Color[][]> colorLayers; //most recent layer is the visible layer
 
     /**
-     * Creates a 1000x1000 white canvas
+     * Creates a MAX_WIDTH x MAX_HEIGHT white canvas
      */
     public MemorySmartCanvas(int id){
         this.id = id;
         this.colorLayers = new ArrayList<>();
 
-        Color[][] temp = new Color[1000][1000];
-        for(int y=0;y<1000;y++){
-            for(int x=0;x<1000;x++){
+        Color[][] temp = new Color[CanvasConstants.MAX_HEIGHT][CanvasConstants.MAX_WIDTH];
+        for(int y=0;y<CanvasConstants.MAX_HEIGHT;y++){
+            for(int x=0;x<CanvasConstants.MAX_WIDTH;x++){
                 temp[y][x] = Color.white;
             }
         }
@@ -93,7 +95,11 @@ public class MemorySmartCanvas implements Canvas{
         }
     }
 
+
     public Color[][] getLayer(int layer){ return colorLayers.get(layer); }
+
+    public Color[][] getTop(){ return colorLayers.get(getNumLayers()-1); }
+
 
     public Color[][] getLayerCopy(int layer){
         Color[][] temp = new Color[getHeight()][getWidth()];

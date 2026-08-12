@@ -1,9 +1,13 @@
 package model;
 
+import model.constants.CanvasConstants;
 import model.controlActions.ControlAction;
+import model.controlActions.Redo;
 import model.helpers.ActionPointTracker;
+import model.helpers.BoundingBox;
 import model.paintActions.*;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -26,6 +30,27 @@ public class StateTracker {
 
     /** ArrayList containing user actions in sequence */
     private ArrayList<PaintAction> timeline = new ArrayList<>();
+
+    public int lastSyncIndex = 0;
+
+    public void updateLSI(){
+        if(timeline.isEmpty()){
+            lastSyncIndex = 0;
+            return;
+        }
+        lastSyncIndex = timeline.size()-1;
+    }
+
+    public BoundingBox affectedAreaBoundingBox(){
+        if(timeline.isEmpty() || lastSyncIndex == timeline.size()-1){
+            return new BoundingBox(0,0,0,0);
+        }
+        BoundingBox aabb = timeline.get(lastSyncIndex).getBoundingBox();
+        for(int i=lastSyncIndex; i<timeline.size(); i++){
+            aabb = BoundingBox.combine(aabb, timeline.get(i).getBoundingBox());
+        }
+        return aabb;
+    }
 
     /** Stores each player's undo data */
     private HashMap<Integer, ActionPointTracker<Integer>> actionPointTracker = new HashMap<>();
@@ -50,7 +75,8 @@ public class StateTracker {
     }
 
     //receive action that isnt something you apply to the canvas, like undos
-    public void receiveControlAction(ControlAction controlAction){
+    //synchronized because every request must be processed in order
+    public synchronized void receiveControlAction(ControlAction controlAction){
 
         //create if not initialized
         if(!actionPointTracker.containsKey(controlAction.getUserID())){
@@ -60,11 +86,18 @@ public class StateTracker {
 
         this.lcc = getLCC();
 
+        if(controlAction instanceof Redo){debugBreakpoint();}
+
         controlAction.runAction(canvas, pointToCanvasLayer, timeline, apt, lcc);
+
+        //System.out.println(canvas.printCanvas());
+
+
     }
 
     //receive a concrete action that affects the canvas
-    public void receivePaintAction(PaintAction paintAction){
+    //synchronized because every request must be processed in order
+    public synchronized void receivePaintAction(PaintAction paintAction){
 
         //create if not initialized
         if(!actionPointTracker.containsKey(paintAction.getUserID())){
@@ -116,6 +149,12 @@ public class StateTracker {
         //apply the action
         paintAction.apply(canvas);
 
+        //System.out.println(canvas.printCanvas());
+
+    }
+
+    public void debugBreakpoint(){
+        return;
     }
 
 
