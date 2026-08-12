@@ -1,6 +1,9 @@
 package model.paintActions;
 
 import model.Canvas;
+import model.helpers.BoundingBox;
+
+import java.awt.*;
 
 /**
  * Action that indicates a user has ended a stroke, by ending their click while using the paint tool
@@ -8,12 +11,14 @@ import model.Canvas;
 public class EndStroke implements PaintAction, Undoable {
     private int x;
     private int y;
+    private int thickness;
     private int id;
     private UndoStatus status = UndoStatus.DONE;
 
-    public EndStroke(int x, int y, int id){
+    public EndStroke(int x, int y, int t, int id){
         this.x = x;
         this.y = y;
+        this.thickness = t;
         this.id = id;
     }
 
@@ -26,7 +31,18 @@ public class EndStroke implements PaintAction, Undoable {
     @Override
     public void apply(Canvas canvas) {
         if(status != UndoStatus.DONE) return;
-        System.out.println("applied EndStroke");
+        if( x < 0 || x > canvas.getWidth() || y < 0 || y > canvas.getWidth()) return;
+        //System.out.println("applied EndStroke");
+    }
+
+    @Override
+    public BoundingBox getBoundingBox() {
+        int minX = x - thickness/2;
+        int minY = y - thickness/2;
+        int maxX = x + (thickness-1)/2;
+        int maxY = y + (thickness-1)/2;
+
+        return new BoundingBox(minX, minY, maxX, maxY);
     }
 
     @Override
