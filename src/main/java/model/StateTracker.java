@@ -3,6 +3,7 @@ package model;
 import model.constants.CanvasConstants;
 import model.controlActions.ControlAction;
 import model.controlActions.Redo;
+import model.controlActions.Undo;
 import model.helpers.ActionPointTracker;
 import model.helpers.BoundingBox;
 import model.paintActions.*;
@@ -32,6 +33,7 @@ public class StateTracker {
     private ArrayList<PaintAction> timeline = new ArrayList<>();
 
     public int lastSyncIndex = 0;
+    public int uniqueUsers = 0;
 
     public void updateLSI(){
         if(timeline.isEmpty()){
@@ -69,6 +71,12 @@ public class StateTracker {
             catch (Exception _){
 
             }
+            try{
+                indList.add(apt.getEarliestUnavailableUndoPoint()); //technically not the latest, but is safe
+            }
+            catch (Exception _){
+
+            }
         });
         if(indList.isEmpty()){ return 0; }
         return Collections.min(indList);
@@ -85,10 +93,17 @@ public class StateTracker {
         ActionPointTracker<Integer> apt = actionPointTracker.get(controlAction.getUserID());
 
         this.lcc = getLCC();
+        //if you undo, we want to set lsi to this
+        //if you redo, we want to not set lsi to this
+        //if(controlAction instanceof Undo || Redo){
+            lastSyncIndex = lcc;
+        //}
 
-        if(controlAction instanceof Redo){debugBreakpoint();}
+
+        //if(controlAction instanceof Redo){debugBreakpoint();}
 
         controlAction.runAction(canvas, pointToCanvasLayer, timeline, apt, lcc);
+
 
         //System.out.println(canvas.printCanvas());
 

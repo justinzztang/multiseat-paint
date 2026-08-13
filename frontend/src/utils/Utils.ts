@@ -6,6 +6,9 @@ export type WebSocketMessage =
     | {type: "EndStroke"; userID: number; x: number; y: number; thickness:number;}
     | {type: "Undo"; userID:number}
     | {type: "Redo"; userID:number}
+    | {type: "IDAssignment"; userID:number}
+    | {type: "breakpoint"; userID:number}
+
 
 
 export type Color = {r:number;g:number;b:number;a:number}

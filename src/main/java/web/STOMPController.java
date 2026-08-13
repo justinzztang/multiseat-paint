@@ -13,6 +13,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SubscribeMapping;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -22,6 +23,7 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
+import web.helpers.DTO.ServerMessageDTO;
 import web.helpers.DTO.UserActionDTO;
 
 @Controller
@@ -47,6 +49,8 @@ public class STOMPController {
           default -> null;
         };
 
+        if(action.type.equals("breakpoint")) PaintServer.stateTracker.debugBreakpoint();
+
         if(paintAction != null){
             PaintServer.stateTracker.receivePaintAction(paintAction);
         }
@@ -64,7 +68,7 @@ public class STOMPController {
 
         StompHeaderAccessor headers = StompHeaderAccessor.wrap(subEvent.getMessage());
         StompCommand command = headers.getCommand();
-        if(command == null || !command.equals(StompCommand.SUBSCRIBE)) return;
+        if(command == null || headers.getDestination() == null || !headers.getDestination().startsWith("/user") || !command.equals(StompCommand.SUBSCRIBE)) return;
 
         byte[] imageByteStream = CanvasUtil.colorArraySectionToBytestream(PaintServer.canvas.getTop(),0, 0, PaintServer.canvas.getWidth()-1, PaintServer.canvas.getHeight()-1);
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.MESSAGE);
@@ -75,7 +79,13 @@ public class STOMPController {
 
         Message<byte[]> message = MessageBuilder.createMessage(imageByteStream, accessor.getMessageHeaders());
 
-        smt.send("/update/whattoupdate", message);
+        smt.convertAndSendToUser(headers.getSessionId(),"/update/whattoupdate", imageByteStream,accessor.getMessageHeaders());
+
+        SimpMessageHeaderAccessor syncr = SimpMessageHeaderAccessor.create();
+        syncr.setSessionId(headers.getSessionId());
+        syncr.setLeaveMutable(true);
+        smt.convertAndSendToUser(headers.getSessionId(),"/update/whattoupdate", new ServerMessageDTO("IDAssignment",PaintServer.stateTracker.uniqueUsers), syncr.getMessageHeaders());
+        PaintServer.stateTracker.uniqueUsers++;
 
     }
 

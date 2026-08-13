@@ -22,7 +22,7 @@ public class Syncer {
         this.smt = smt;
     }
 
-    @Scheduled(fixedRate= 5000)
+    @Scheduled(fixedRate= 100)
     public void syncCanvas(){
 
         //statetracker or something stores the affected area

@@ -10,120 +10,9 @@ import {bresenhamLine} from "../utils/Bresenham.ts";
 
 function Board(){
 
-    //websocket stuff
-    const stompRef = useRef<Client | null>(null);
-    const [status, setStatus] = useState("disconnected");
-
-    //this one works
-    const sendWebSocketMessage = useCallback(
-        (msg:WebSocketMessage) => {
-            console.log(msg);
-            const client = stompRef.current;
-            if (client?.connected){
-                client.publish({
-                    destination: "/app/handleaction",
-                    body: JSON.stringify(msg)
-                })
-            }
-        },
-        []
-    );
-
-    //unknown
-    const receiveWebSocketMessage = useCallback(
-        (msg:WebSocketMessage) => {
-            switch (msg.type) {
-                case "BeginStroke":
-                    console.log("received beginstroke");
-                    break;
-                default:
-                    console.log("received some json thing");
-            }
-        },
-        []
-    );
-
-    //works, at least once
-    const receiveSyncMessage = useCallback(
-        (msg:IMessage) => {
-            console.log("received sync message @", performance.now());
-            const bytes:Uint8Array = msg.binaryBody;
-            const startingX = bytes[0];
-            const startingY = bytes[1];
-            const width = bytes[2];
-            const height = bytes[3];
-
-            console.log(bytes);
-
-            const bg = backgroundCtxRef.current;
-            if (!bg) return;
-            let index = 4;
-            for(let y = startingY; y < startingY + height; y++){
-                for(let x = startingX; x < startingX + width; x++){
-
-                    let cellColor:Color = {r:bytes[index],g:bytes[index+1],b:bytes[index+2],a:bytes[index+3]};
-                    index+=4;
-                    console.log(cellColor);
-                    drawCell(x, y, bg, cellColor);
-
-                }
-            }
-        },
-        [drawCell]
-    );
-
-    //problem
-    const connectWebSocket = useCallback(() => {
-        setStatus("connecting");
-
-        const client = new Client({
-            brokerURL: "ws://localhost:8080/update-websocket",
-            reconnectDelay: 5000,
-            //debug: (str) => console.log("[stomp]", str),
-            onConnect: () => {
-                console.log("idk");
-                setStatus("connected");
-                //its gotta be here
-                client.subscribe("/update/whattoupdate", (message:IMessage) => {
-                    console.log("received some message");
-                    try{
-                        console.log("inside try");
-                        if(message.isBinaryBody){
-                            console.log("binbod");
-                            receiveSyncMessage(message);
-                        }
-                        else {
-                            console.log("else")
-                            const msg = JSON.parse(message.body) as WebSocketMessage;
-                            receiveWebSocketMessage(msg);
-                        }
-                    } catch (err){
-                        console.error("malformed message:", message.body, err);
-                    }
-
-                });
-
-            }
-        });
-
-        client.activate();
-        stompRef.current = client;
-
-        console.log(status);
-
-    }, [receiveWebSocketMessage, receiveSyncMessage]);
-
-    const disconnect = useCallback(() => {
-        stompRef.current?.deactivate();
-        stompRef.current = null;
-    }, []);
-
-    useEffect(() => () => {stompRef.current?.deactivate();}, []);
-
-
     const GRID_SIZE = 1;
-    var width = 10;
-    var height = 10;
+    var width = 100;
+    var height = 100;
 
     // the top canvas
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -133,6 +22,12 @@ function Board(){
     const backgroundCanvasRef = useRef <HTMLCanvasElement | null>(null);
     //the background canvas context
     const backgroundCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+
+    // the canvas used for making the putimagedata syncs normal
+    const syncCanvas = new OffscreenCanvas(1,1);
+    // the sync canvas context
+    const syncCtx = syncCanvas.getContext("2d");
+
     // last point drawn, used for connecting lines smoothly
     const lastPointRef = useRef<Point | null>(null);
     // if the pen is down
@@ -155,6 +50,7 @@ function Board(){
         canvasRef.current.height = Math.round(height*dpr);
         backgroundCanvasRef.current.width = Math.round(width*dpr);
         backgroundCanvasRef.current.height = Math.round(height*dpr);
+
 
         ctxRef.current = canvasRef.current.getContext("2d");
         backgroundCtxRef.current = backgroundCanvasRef.current.getContext("2d");
@@ -192,6 +88,164 @@ function Board(){
         ctx.fillRect(left, top, right - left, bottom - top);
     }
 
+    const drawLine = useCallback(
+        (prevX : number, prevY: number, newX:number, newY:number) => {
+            const ctx = ctxRef.current;
+            if (!ctx) return;
+            const markedCells = bresenhamLine(prevX,prevY,newX,newY);
+            if(!colorRef.current) return;
+            let penColor = hexToColor(colorRef.current.value);
+            if (!penColor) penColor = {r:0,g:0,b:0,a:255};
+            for (const cell of markedCells) {
+                drawCell(cell.x , cell.y, ctx,penColor);
+            }
+        },[drawCell, bresenhamLine]
+    );
+
+    const transferTopToBackground = useCallback(
+        () => {
+            const bg = backgroundCtxRef.current;
+            const fg = canvasRef.current;
+            const fgCtx = ctxRef.current;
+            if (!bg || !fg || !fgCtx) return;
+
+            bg.save();
+            bg.setTransform(1,0,0,1,0,0);
+            bg.drawImage(fg, 0, 0);
+            bg.restore();
+            fgCtx.clearRect(0,0,fg.width, fg.height);
+        },[]
+    );
+
+    //websocket stuff
+    const stompRef = useRef<Client | null>(null);
+    const [status, setStatus] = useState("disconnected");
+    const [userID, setUserID] = useState(-1);
+
+    //this one works
+    const sendWebSocketMessage = useCallback(
+        (msg:WebSocketMessage) => {
+            console.log(msg);
+            const client = stompRef.current;
+            if (client?.connected){
+                client.publish({
+                    destination: "/app/handleaction",
+                    body: JSON.stringify(msg)
+                })
+            }
+        },
+        []
+    );
+
+    //unknown
+    const receiveWebSocketMessage = useCallback(
+        (msg:WebSocketMessage) => {
+            switch (msg.type) {
+                case "BeginStroke":
+                    console.log("received beginstroke");
+                    break;
+                case "IDAssignment":
+                    console.log("assigned user id: " + msg.userID);
+                    setUserID(msg.userID);
+                    break;
+                default:
+                    console.log("received some json thing");
+            }
+        },
+        []
+    );
+
+    const receiveSyncMessage = useCallback(
+        (msg:IMessage) => {
+            const bytes:Uint8Array = msg.binaryBody;
+            const startingX = bytes[0];
+            const startingY = bytes[1];
+            const width = bytes[2];
+            const height = bytes[3];
+            const bg = backgroundCtxRef.current;
+            if (!bg) return;
+
+            const imageData = bg.createImageData(width, height);
+            const data = imageData.data;
+
+            let index = 4;
+            for(let y = startingY; y < startingY + height; y++){
+                for(let x = startingX; x < startingX + width; x++){
+                    data[index-4] = bytes[index];
+                    data[index-3] = bytes[index+1];
+                    data[index-2] = bytes[index+2];
+                    data[index-1] = bytes[index+3];
+                    index+=4;
+                }
+            }
+
+            if(syncCanvas.width !== width || syncCanvas.height !== height){
+                syncCanvas.width = width;
+                syncCanvas.height = height;
+            }
+
+            syncCtx?.putImageData(imageData,0,0);
+
+            bg.save();
+            //bg.setTransform(1,0,0,1,0,0);
+            bg.drawImage(syncCanvas,startingX,startingY);
+            bg.restore();
+            transferTopToBackground();
+        },
+        [drawCell, transferTopToBackground]
+    );
+
+    //problem
+    const connectWebSocket = useCallback(() => {
+        setStatus("connecting");
+
+        const client = new Client({
+            brokerURL: "ws://localhost:8080/update-websocket",
+            reconnectDelay: 5000,
+            //debug: (str) => console.log("[stomp]", str),
+            onConnect: () => {
+                console.log("idk");
+                setStatus("connected");
+                //its gotta be here
+                client.subscribe("/update/whattoupdate", messageCallback);
+
+                client.subscribe("/user/update/whattoupdate", messageCallback);
+
+                function messageCallback(message: IMessage) {
+                    try {
+                        if (message.headers["content-type"].includes("application/json")) {
+                            const msg = JSON.parse(message.body) as WebSocketMessage;
+                            receiveWebSocketMessage(msg);
+                        } else if (message.isBinaryBody) {
+                            receiveSyncMessage(message);
+                        } else {
+                            console.log("??????????");
+                            /*const msg = JSON.parse(message.body) as WebSocketMessage;
+                            receiveWebSocketMessage(msg);*/
+                        }
+                    } catch (err) {
+                        console.error("malformed message:", message.body, err);
+                    }
+
+                }
+
+            }
+        });
+
+        client.activate();
+        stompRef.current = client;
+
+        console.log(status);
+
+    }, [receiveWebSocketMessage, receiveSyncMessage]);
+
+    const disconnect = useCallback(() => {
+        stompRef.current?.deactivate();
+        stompRef.current = null;
+    }, []);
+
+    useEffect(() => () => {stompRef.current?.deactivate();}, []);
+
     const beginStroke = useCallback(
         (e: React.PointerEvent<HTMLCanvasElement>) => {
             const { x, y } = getPoint(e);
@@ -214,24 +268,12 @@ function Board(){
             penDownRef.current = true;
 
             //send message
-            sendWebSocketMessage({type: "BeginStroke", userID: 0, x: cellX, y: cellY, thickness:1,r:penColor.r,g:penColor.g,b:penColor.b,a:penColor.a});
+            sendWebSocketMessage({type: "BeginStroke", userID: userID, x: cellX, y: cellY, thickness:1,r:penColor.r,g:penColor.g,b:penColor.b,a:penColor.a});
         },
-        [drawCell, getPoint]
+        [drawCell, getPoint, sendWebSocketMessage, userID]
     );
 
-    const drawLine = useCallback(
-        (prevX : number, prevY: number, newX:number, newY:number) => {
-            const ctx = ctxRef.current;
-            if (!ctx) return;
-            const markedCells = bresenhamLine(prevX,prevY,newX,newY);
-            if(!colorRef.current) return;
-            let penColor = hexToColor(colorRef.current.value);
-            if (!penColor) penColor = {r:0,g:0,b:0,a:255};
-            for (const cell of markedCells) {
-                drawCell(cell.x , cell.y, ctx,penColor);
-            }
-        },[drawCell, bresenhamLine]
-    );
+
 
     const pointerMove = useCallback(
         (e:React.PointerEvent<HTMLCanvasElement>) =>{
@@ -246,67 +288,44 @@ function Board(){
             if (!penColor) penColor = {r:0,g:0,b:0,a:255};
 
             //send message
-            sendWebSocketMessage({type: "Draw", userID: 0,
+            sendWebSocketMessage({type: "Draw", userID: userID,
                 prevX:snapToGrid(last.x), prevY:snapToGrid(last.y),
                 x: snapToGrid(x), y: snapToGrid(y),thickness:1,r:penColor.r,g:penColor.g,b:penColor.b,a:penColor.a});
 
 
         },
-        [getPoint, drawLine]
+        [getPoint, drawLine, sendWebSocketMessage, userID]
     );
 
     const pointerUp = useCallback(
         (e:React.PointerEvent<HTMLCanvasElement>) => {
+            if(!penDownRef.current) return;
+
             penDownRef.current = false;
             lastPointRef.current = null;
 
             //send message
             const {x,y} = getPoint(e);
-            sendWebSocketMessage({type: "EndStroke", userID: 0, x: Math.floor(x / GRID_SIZE) * GRID_SIZE, y: Math.floor(y / GRID_SIZE) * GRID_SIZE, thickness: 1});
+            sendWebSocketMessage({type: "EndStroke", userID: userID, x: Math.floor(x / GRID_SIZE) * GRID_SIZE, y: Math.floor(y / GRID_SIZE) * GRID_SIZE, thickness: 1});
         },
-        []
+        [getPoint, sendWebSocketMessage, userID]
     );
 
     const sendUndo = useCallback(
         () => {
-            sendWebSocketMessage({type: "Undo", userID: 0});
-        },[]
+            sendWebSocketMessage({type: "Undo", userID: userID});
+        },[ sendWebSocketMessage, userID]
     );
     const sendRedo = useCallback(
         () => {
-            sendWebSocketMessage({type: "Redo", userID: 0});
-        },[]
+            sendWebSocketMessage({type: "Redo", userID: userID});
+        },[ sendWebSocketMessage, userID]
     );
 
-    const transferTopToBackground = useCallback(
+    const breakpoint = useCallback(
         () => {
-            const bg = backgroundCtxRef.current;
-            const fg = canvasRef.current;
-            const fgCtx = ctxRef.current;
-            if (!bg || !fg || !fgCtx) return;
-
-            bg.save();
-            bg.setTransform(1,0,0,1,0,0);
-            bg.drawImage(fg, 0, 0);
-            bg.restore();
-            fgCtx.clearRect(0,0,fg.width, fg.height);
-        },[]
-    );
-
-
-
-    const handleSync = useCallback(
-        () => {
-            //background layer is everything pre-savedstrokes
-            //top layer is savedstrokes
-            //we just received a affected areas diff
-
-            //apply affected areas diff to the previous image
-            //then apply savedstrokes
-            //then clear savedstrokes
-
-
-        },[]
+            sendWebSocketMessage({type: "breakpoint", userID: userID});
+        },[ sendWebSocketMessage, userID]
     );
 
     return(
@@ -315,24 +334,20 @@ function Board(){
                 <button onClick={connectWebSocket}>connect|</button>
                 <button onClick={sendUndo}>undo|</button>
                 <button onClick={sendRedo}>redo|</button>
-                <button onClick={transferTopToBackground}>transfer</button>
+                <button onClick={breakpoint}>breakpoint</button>
                 <input ref={colorRef} type="color" id="strokeColor" name="strokeColor"></input>
-                <div className="relative w-[10px] h-[10px]">
+                <div className="relative w-[100px] h-[100px]">
                     <canvas
                         ref={backgroundCanvasRef}
-                        width={10}
-                        height={10}
-                        className=" w-[10px] h-[10px] bg-white image-render-[pixelated] z-10"
+                        className="absolute top-0 left-0 w-[100px] h-[100px] bg-white image-render-[pixelated] z-10"
                     />
-                    <br/>
                     <canvas
                         ref={canvasRef}
-                        width={10}
-                        height={10}
-                        className=" w-[10px] h-[10px] bg-white image-render-[pixelated] z-50"
+                        className="absolute top-0 left-0 w-[100px] h-[100px] image-render-[pixelated] z-50"
                         onPointerDown={beginStroke}
                         onPointerMove={pointerMove}
                         onPointerUp={pointerUp}
+                        onPointerOut={pointerUp}
                     />
                 </div>
                 <h1>footer</h1>

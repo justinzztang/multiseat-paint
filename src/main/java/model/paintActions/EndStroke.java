@@ -25,7 +25,7 @@ public class EndStroke implements PaintAction, Undoable {
 
     @Override
     public int getUserID() {
-        return 0;
+        return id;
     }
 
     @Override

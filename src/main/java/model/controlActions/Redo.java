@@ -38,7 +38,7 @@ public class Redo implements ControlAction{
 
             //update canvas
             canvas.setLayer(canvas.getLayerCopy(pointToCanvasLayer.get(lcc))); //TODO bug: this should be LCC
-            for(int i=lcc; i<=jumpIndex;i++){
+            for(int i=lcc; i<=timeline.size();i++){
                 timeline.get(i).apply(canvas);
             }
 
