@@ -11,8 +11,8 @@ import {bresenhamLine} from "../utils/Bresenham.ts";
 function Board(){
 
     const GRID_SIZE = 1;
-    var width = 100;
-    var height = 100;
+    var width = 1000;
+    var height = 1000;
 
     // the top canvas
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -84,7 +84,6 @@ function Board(){
         const bottom = snap(cellY + GRID_SIZE);
 
         ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})`;
-        console.log(ctx.fillStyle)
         ctx.fillRect(left, top, right - left, bottom - top);
     }
 
@@ -158,23 +157,23 @@ function Board(){
     const receiveSyncMessage = useCallback(
         (msg:IMessage) => {
             const bytes:Uint8Array = msg.binaryBody;
-            const startingX = bytes[0];
-            const startingY = bytes[1];
-            const width = bytes[2];
-            const height = bytes[3];
+            const startingX = (bytes[0] << 8) + (bytes[1]);
+            const startingY = (bytes[2] << 8) + (bytes[3]);
+            const width = (bytes[4] << 8) + (bytes[5]);
+            const height = (bytes[6] << 8) + (bytes[7]);
             const bg = backgroundCtxRef.current;
             if (!bg) return;
 
             const imageData = bg.createImageData(width, height);
             const data = imageData.data;
 
-            let index = 4;
+            let index = 8;
             for(let y = startingY; y < startingY + height; y++){
                 for(let x = startingX; x < startingX + width; x++){
-                    data[index-4] = bytes[index];
-                    data[index-3] = bytes[index+1];
-                    data[index-2] = bytes[index+2];
-                    data[index-1] = bytes[index+3];
+                    data[index-8] = bytes[index];
+                    data[index-7] = bytes[index+1];
+                    data[index-6] = bytes[index+2];
+                    data[index-5] = bytes[index+3];
                     index+=4;
                 }
             }
@@ -336,14 +335,14 @@ function Board(){
                 <button onClick={sendRedo}>redo|</button>
                 <button onClick={breakpoint}>breakpoint</button>
                 <input ref={colorRef} type="color" id="strokeColor" name="strokeColor"></input>
-                <div className="relative w-[100px] h-[100px]">
+                <div className={`relative w-[${width}px] h-[${height}px]`}>
                     <canvas
                         ref={backgroundCanvasRef}
-                        className="absolute top-0 left-0 w-[100px] h-[100px] bg-white image-render-[pixelated] z-10"
+                        className={` w-[${width}px] h-[${height}px] absolute top-0 left-0 bg-white image-render-[pixelated] z-10`}
                     />
                     <canvas
                         ref={canvasRef}
-                        className="absolute top-0 left-0 w-[100px] h-[100px] image-render-[pixelated] z-50"
+                        className={` w-[${width}px] h-[${height}px] absolute top-0 left-0 image-render-[pixelated] z-50`}
                         onPointerDown={beginStroke}
                         onPointerMove={pointerMove}
                         onPointerUp={pointerUp}

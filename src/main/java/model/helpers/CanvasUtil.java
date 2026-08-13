@@ -21,10 +21,33 @@ public class CanvasUtil {
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         //metadata so its possible to know where this section goes
-        baos.write(startingX);
-        baos.write(startingY);
-        baos.write(w);
-        baos.write(h);
+
+        //8 bit integer overflow
+        //these coords should never be more than 1000, so 16 bits is fine
+        int sxhigh = (startingX >> 8) & 0xFF;
+        int sxlow = startingX & 0xFF;
+
+        int syhigh = (startingY >> 8) & 0xFF;
+        int sylow = startingY & 0xFF;
+
+        int whigh = (w >> 8) & 0xFF;
+        int wlow = w & 0xFF;
+
+        int hhigh = (h >> 8) & 0xFF;
+        int hlow = h & 0xFF;
+
+        //big endian
+        baos.write(sxhigh);
+        baos.write(sxlow);
+
+        baos.write(syhigh);
+        baos.write(sylow);
+
+        baos.write(whigh);
+        baos.write(wlow);
+
+        baos.write(hhigh);
+        baos.write(hlow);
 
         for (int y = startingY; y < startingY + h; y++) {
             for (int x = startingX; x < startingX + w; x++) {
