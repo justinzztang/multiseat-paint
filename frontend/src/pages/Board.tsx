@@ -4,6 +4,8 @@ import {Client, type IMessage} from "@stomp/stompjs";
 
 import type {Point, WebSocketMessage, Color} from "../utils/Utils.ts";
 
+import {hexToColor} from "../utils/Utils.ts";
+
 import {bresenhamLine} from "../utils/Bresenham.ts";
 
 function Board(){
@@ -136,6 +138,8 @@ function Board(){
     // if the pen is down
     const penDownRef = useRef(false);
 
+    const colorRef = useRef<HTMLInputElement | null>(null);
+
     const dpr = window.devicePixelRatio || 1;
 
     const snap = (v:number) => Math.round(v * dpr) / dpr;
@@ -162,6 +166,12 @@ function Board(){
         ctxRef.current.imageSmoothingEnabled = false;
         backgroundCtxRef.current.scale(window.devicePixelRatio, window.devicePixelRatio);
         backgroundCtxRef.current.imageSmoothingEnabled = false;
+
+        if(!colorRef.current){
+            console.log("ERROR: color picker not detected");
+            return;
+        }
+
         }, []);
 
     const getPoint = useCallback( //TODO need a lot of modifications when you add zooming and stuff
@@ -194,15 +204,17 @@ function Board(){
             const cellY = Math.floor(y / GRID_SIZE) * GRID_SIZE;
 
             if(!ctxRef.current) return;
-            drawCell(cellX, cellY, ctxRef.current, {r:0,g:0,b:0,a:255});
+            if(!colorRef.current) return;
+            let penColor = hexToColor(colorRef.current.value);
+            if (!penColor) penColor = {r:0,g:0,b:0,a:255};
+            drawCell(cellX, cellY, ctxRef.current, penColor);
             console.log(cellX);
 
             lastPointRef.current = {x,y};
             penDownRef.current = true;
 
             //send message
-            sendWebSocketMessage({type: "BeginStroke", userID: 0, x: cellX, y: cellY, thickness:1});
-
+            sendWebSocketMessage({type: "BeginStroke", userID: 0, x: cellX, y: cellY, thickness:1,r:penColor.r,g:penColor.g,b:penColor.b,a:penColor.a});
         },
         [drawCell, getPoint]
     );
@@ -212,8 +224,11 @@ function Board(){
             const ctx = ctxRef.current;
             if (!ctx) return;
             const markedCells = bresenhamLine(prevX,prevY,newX,newY);
+            if(!colorRef.current) return;
+            let penColor = hexToColor(colorRef.current.value);
+            if (!penColor) penColor = {r:0,g:0,b:0,a:255};
             for (const cell of markedCells) {
-                drawCell(cell.x , cell.y, ctx,{r:0,g:0,b:0,a:255});
+                drawCell(cell.x , cell.y, ctx,penColor);
             }
         },[drawCell, bresenhamLine]
     );
@@ -226,10 +241,14 @@ function Board(){
             drawLine(last.x, last.y, x, y);
             lastPointRef.current = {x,y};
 
+            if(!colorRef.current) return;
+            let penColor = hexToColor(colorRef.current.value);
+            if (!penColor) penColor = {r:0,g:0,b:0,a:255};
+
             //send message
             sendWebSocketMessage({type: "Draw", userID: 0,
                 prevX:snapToGrid(last.x), prevY:snapToGrid(last.y),
-                x: snapToGrid(x), y: snapToGrid(y),thickness:1});
+                x: snapToGrid(x), y: snapToGrid(y),thickness:1,r:penColor.r,g:penColor.g,b:penColor.b,a:penColor.a});
 
 
         },
@@ -295,7 +314,9 @@ function Board(){
             <div className="bg-gray-200">
                 <button onClick={connectWebSocket}>connect|</button>
                 <button onClick={sendUndo}>undo|</button>
+                <button onClick={sendRedo}>redo|</button>
                 <button onClick={transferTopToBackground}>transfer</button>
+                <input ref={colorRef} type="color" id="strokeColor" name="strokeColor"></input>
                 <div className="relative w-[10px] h-[10px]">
                     <canvas
                         ref={backgroundCanvasRef}

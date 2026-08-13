@@ -36,8 +36,8 @@ public class STOMPController {
     public void handleTheAction(UserActionDTO action) throws Exception {
 
         PaintAction paintAction = switch (action.type) {
-            case "BeginStroke" -> new BeginStroke(action.x, action.y, action.thickness, action.userID);
-            case "Draw" -> new Draw(action.prevX, action.prevY, action.x, action.y, action.thickness, action.userID);
+            case "BeginStroke" -> new BeginStroke(action.x, action.y, action.thickness, action.r, action.g, action.b, action.a, action.userID);
+            case "Draw" -> new Draw(action.prevX, action.prevY, action.x, action.y, action.thickness, action.r, action.g, action.b, action.a, action.userID);
             case "EndStroke" -> new EndStroke(action.x, action.y, action.thickness, action.userID);
             default -> null;
         };

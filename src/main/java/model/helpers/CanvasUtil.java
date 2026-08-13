@@ -24,8 +24,8 @@ public class CanvasUtil {
                 Color c = image[y][x];
 
                 baos.write(c.getRed());
-                baos.write(c.getBlue());
                 baos.write(c.getGreen());
+                baos.write(c.getBlue());
                 baos.write(c.getAlpha());
             }
         }

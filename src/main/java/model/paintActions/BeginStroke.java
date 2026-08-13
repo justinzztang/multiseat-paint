@@ -13,14 +13,23 @@ public class BeginStroke implements PaintAction, Undoable {
     private int x;
     private int y;
     private int thickness;
+    private int r;
+    private int g;
+    private int b;
+    private int a;
     private int id;
     private UndoStatus status = UndoStatus.DONE;
 
-    public BeginStroke(int x, int y, int t, int id){
+    public BeginStroke(int x, int y, int t, int r, int g, int b, int a, int id){
         this.x = x;
         this.y = y;
         this.thickness = t;
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        this.a = a;
         this.id = id;
+
     }
 
 
@@ -33,7 +42,7 @@ public class BeginStroke implements PaintAction, Undoable {
     public void apply(Canvas canvas) {
         if(status != UndoStatus.DONE) return;
         if( x < 0 || x > canvas.getWidth() || y < 0 || y > canvas.getWidth()) return;
-        canvas.setPixel(x,y,0,0,0,255); //TODO temporary values
+        canvas.setPixel(x,y,r,g,b,a);
         //System.out.println("applied BeginStroke");
     }
 
