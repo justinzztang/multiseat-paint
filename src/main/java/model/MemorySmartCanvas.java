@@ -89,6 +89,11 @@ public class MemorySmartCanvas implements Canvas{
 
     @Override
     public void setPixel(int x, int y, int r, int g, int b, int a) {
+
+        if(x < 0 || x >= getWidth() || y < 0 || y >= getHeight()){
+            return;
+        }
+
         //only set to the color if the color is different, otherwise keep it as the reference, this will save memory
         if(!colorLayers.getLast()[y][x].equals(new Color(r,g,b,a))){
             colorLayers.getLast()[y][x] = new Color(r,g,b,a);

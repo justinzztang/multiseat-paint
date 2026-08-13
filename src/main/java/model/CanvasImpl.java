@@ -1,5 +1,7 @@
 package model;
 
+import model.constants.CanvasConstants;
+
 import java.awt.Color;
 import java.util.Arrays;
 
@@ -9,14 +11,14 @@ public class CanvasImpl implements Canvas{
     private Color[][] colorArray;
 
     /**
-     * Creates a 1000x1000 white canvas
+     * Creates a MAX_WIDTH x MAX_HEIGHT white canvas
      */
     public CanvasImpl(int id){
         this.id = id;
 
-        Color[][] temp = new Color[1000][1000];
-        for(int y=0;y<1000;y++){
-            for(int x=0;x<1000;x++){
+        Color[][] temp = new Color[CanvasConstants.MAX_HEIGHT][CanvasConstants.MAX_WIDTH];
+        for(int y=0;y<CanvasConstants.MAX_HEIGHT;y++){
+            for(int x=0;x<CanvasConstants.MAX_WIDTH;x++){
                 temp[y][x] = Color.white;
             }
         }

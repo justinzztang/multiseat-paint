@@ -9,6 +9,13 @@ public class CanvasUtil {
      * Precondition: startingX < endingX and startingY < endingY
      */
     public static byte[] colorArraySectionToBytestream(Color[][] image, int startingX, int startingY, int endingX, int endingY) { //TODO specify these are inclusive
+
+        startingX = Math.max(0, startingX);
+        startingY = Math.max(0, startingY);
+
+        endingX = Math.min(image[0].length-1, endingX);
+        endingY = Math.min(image.length-1, endingY);
+
         int w = endingX - startingX + 1;
         int h = endingY - startingY + 1;
 
@@ -21,6 +28,7 @@ public class CanvasUtil {
 
         for (int y = startingY; y < startingY + h; y++) {
             for (int x = startingX; x < startingX + w; x++) {
+
                 Color c = image[y][x];
 
                 baos.write(c.getRed());
