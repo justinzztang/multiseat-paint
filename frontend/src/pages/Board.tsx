@@ -48,8 +48,13 @@ function Board(){
         }
         canvasRef.current.width = Math.round(width*dpr);
         canvasRef.current.height = Math.round(height*dpr);
+        //canvasRef.current.style.width = width+'px';
+        //canvasRef.current.style.height = height+'px';
         backgroundCanvasRef.current.width = Math.round(width*dpr);
         backgroundCanvasRef.current.height = Math.round(height*dpr);
+        //backgroundCanvasRef.current.style.width = width+'px';
+        //backgroundCanvasRef.current.style.height = height+'px';
+
 
 
         ctxRef.current = canvasRef.current.getContext("2d");
@@ -329,20 +334,22 @@ function Board(){
 
     return(
         <>
-            <div className="bg-gray-200">
+            <div className="bg-gray-200 h-max">
                 <button onClick={connectWebSocket}>connect|</button>
                 <button onClick={sendUndo}>undo|</button>
                 <button onClick={sendRedo}>redo|</button>
                 <button onClick={breakpoint}>breakpoint</button>
                 <input ref={colorRef} type="color" id="strokeColor" name="strokeColor"></input>
-                <div className={`relative w-[${width}px] h-[${height}px]`}>
+                <div className="relative ml-10" style={{ width: `${width}px`, height: `${height}px` }}>
                     <canvas
                         ref={backgroundCanvasRef}
-                        className={` w-[${width}px] h-[${height}px] absolute top-0 left-0 bg-white image-render-[pixelated] z-10`}
+                        className="absolute top-0 left-0 bg-white image-render-[pixelated] z-10"
+                        style={{ width: `${width}px`, height: `${height}px` }}
                     />
                     <canvas
                         ref={canvasRef}
-                        className={` w-[${width}px] h-[${height}px] absolute top-0 left-0 image-render-[pixelated] z-50`}
+                        className="absolute top-0 left-0 image-render-[pixelated] z-50"
+                        style={{ width: `${width}px`, height: `${height}px` }}
                         onPointerDown={beginStroke}
                         onPointerMove={pointerMove}
                         onPointerUp={pointerUp}
