@@ -1,5 +1,6 @@
 package model.controlActions;
 
+import model.COWTileCanvas;
 import model.Canvas;
 import model.MemorySmartCanvas;
 import model.helpers.ActionPointTracker;
@@ -23,7 +24,7 @@ public class Undo implements ControlAction{
     }
 
     @Override
-    public boolean runAction(MemorySmartCanvas canvas, HashMap<Integer,Integer> pointToCanvasLayer,
+    public boolean runAction(COWTileCanvas canvas, HashMap<Integer,Integer> pointToCanvasLayer,
                              ArrayList<PaintAction> timeline, ActionPointTracker<Integer> apt, int lcc) {
         try{
             int jumpIndex = apt.getLatestUndoPoint();

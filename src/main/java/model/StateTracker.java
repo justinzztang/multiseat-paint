@@ -20,7 +20,7 @@ import java.util.HashMap;
 public class StateTracker {
 
     private int id;
-    private MemorySmartCanvas canvas;
+    private COWTileCanvas canvas;
     private HashMap<Integer,Integer> pointToCanvasLayer = new HashMap<>();
     private int lcc = 0;
 
@@ -57,7 +57,7 @@ public class StateTracker {
     /** Stores each player's undo data */
     private HashMap<Integer, ActionPointTracker<Integer>> actionPointTracker = new HashMap<>();
 
-    public StateTracker(int id, MemorySmartCanvas canvas){
+    public StateTracker(int id, COWTileCanvas canvas){
         this.id = id;
         this.canvas = canvas;
     }
@@ -147,7 +147,7 @@ public class StateTracker {
                 apt.addUndo(timelineIndex);
                 //need to save a canvas snapshot
                 pointToCanvasLayer.put(timelineIndex, canvas.getNumLayers()-1); //mark the current canvas layer as UNDOPOINT_timelineindex
-                canvas.copyLayer(); //creates a new layer on which everything will be applied, preserving the previous (before this copy) layer
+                canvas.copyTopLayer(); //creates a new layer on which everything will be applied, preserving the previous (before this copy) layer
 
 
             }
@@ -156,7 +156,7 @@ public class StateTracker {
                 //need to save a canvas snapshot, but AFTER application
                 paintAction.apply(canvas);
                 pointToCanvasLayer.put(timelineIndex, canvas.getNumLayers()-1); //mark the current canvas layer as REDOPOINT_timelineindex
-                canvas.copyLayer(); //creates a new layer on which everything after will be applied, preserving the previous (before this copy) layer
+                canvas.copyTopLayer(); //creates a new layer on which everything after will be applied, preserving the previous (before this copy) layer
                 return; //TODO this might need to change in the future
             }
 

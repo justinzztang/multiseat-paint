@@ -1,5 +1,6 @@
 package model.controlActions;
 
+import model.COWTileCanvas;
 import model.Canvas;
 import model.MemorySmartCanvas;
 import model.helpers.ActionPointTracker;
@@ -11,7 +12,7 @@ import java.util.HashMap;
 public interface ControlAction {
     int getUserID();
 
-    boolean runAction(MemorySmartCanvas canvas,
+    boolean runAction(COWTileCanvas canvas,
                       HashMap<Integer,Integer> pointToCanvasLayer,
                       ArrayList<PaintAction> timeline,
                       ActionPointTracker<Integer> apt,
