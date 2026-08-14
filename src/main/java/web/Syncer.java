@@ -27,12 +27,19 @@ public class Syncer {
 
         //statetracker or something stores the affected area
         //send to the clients for them to calculate the canvas themselves
-        byte[] bs = new byte[]{1,2,3,4,5,6,7};
-        //var message = MessageBuilder.withPayload(bs).setHeader("content-type", MimeTypeUtils.APPLICATION_OCTET_STREAM_VALUE).build();
 
-        BoundingBox aabb = PaintServer.stateTracker.affectedAreaBoundingBox();
+        //System.out.println("this sync was at:" + PaintServer.stateTracker.lastSyncIndex);
+        BoundingBox aabb = PaintServer.stateTracker.affectedAreaBoundingBox(true);
         byte[] imageByteStream = CanvasUtil.colorArraySectionToBytestream(PaintServer.canvas.getTop(),aabb.minX, aabb.minY, aabb.maxX, aabb.maxY); //TODO theres a bug where its going based off the last 2 strokes, instead of just 1
-        PaintServer.stateTracker.updateLSI();
+
+        /*System.out.println("=====");
+        System.out.println(aabb.minX);
+        System.out.println(aabb.minY);
+        System.out.println(aabb.maxX);
+        System.out.println(aabb.maxY);
+        System.out.println("=====");*/
+
+
 
         //thanks claude
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.MESSAGE);

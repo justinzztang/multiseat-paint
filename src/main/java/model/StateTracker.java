@@ -7,6 +7,7 @@ import model.controlActions.Undo;
 import model.helpers.ActionPointTracker;
 import model.helpers.BoundingBox;
 import model.paintActions.*;
+import web.PaintServer;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -43,13 +44,16 @@ public class StateTracker {
         lastSyncIndex = timeline.size()-1;
     }
 
-    public BoundingBox affectedAreaBoundingBox(){
+    public BoundingBox affectedAreaBoundingBox(boolean shouldUpdate){
         if(timeline.isEmpty() || lastSyncIndex == timeline.size()-1){
             return new BoundingBox(0,0,0,0);
         }
         BoundingBox aabb = timeline.get(lastSyncIndex).getBoundingBox();
         for(int i=lastSyncIndex; i<timeline.size(); i++){
             aabb = BoundingBox.combine(aabb, timeline.get(i).getBoundingBox());
+        }
+        if(shouldUpdate){
+            updateLSI(); //TODO idk if this actually works, but the idea is that it updates right after all this so the lsi never drifts too far ahead of the timeline size
         }
         return aabb;
     }
@@ -112,6 +116,7 @@ public class StateTracker {
 
     //receive a concrete action that affects the canvas
     //synchronized because every request must be processed in order
+    private int actiontracker = 0;
     public synchronized void receivePaintAction(PaintAction paintAction){
 
         //create if not initialized
@@ -154,17 +159,27 @@ public class StateTracker {
             else if(undoable.getPointType().equals(Undoable.PointType.REDOPOINT)){
                 apt.addRedo(timelineIndex);
                 //need to save a canvas snapshot, but AFTER application
-                paintAction.apply(canvas);
-                pointToCanvasLayer.put(timelineIndex, canvas.getNumLayers()-1); //mark the current canvas layer as REDOPOINT_timelineindex
-                canvas.copyTopLayer(); //creates a new layer on which everything after will be applied, preserving the previous (before this copy) layer
-                return; //TODO this might need to change in the future
+                //paintAction.apply(canvas);
+                //pointToCanvasLayer.put(timelineIndex, canvas.getNumLayers()-1); //mark the current canvas layer as REDOPOINT_timelineindex
+                //canvas.copyTopLayer(); //creates a new layer on which everything after will be applied, preserving the previous (before this copy) layer
+                //return; //TODO this might need to change in the future
             }
 
         }
         //apply the action
+        System.out.println("applied action #" + actiontracker);
+        actiontracker++;
         paintAction.apply(canvas);
 
         //System.out.println(canvas.printCanvas());
+
+    }
+
+    //clean up timeline, getting rid of unreachable canvases (past the undo limit), removing overwritten commands, and changing the tracker stuff
+    //can do the cleaning on a separate thread by copying everything, then cleaning it
+    //needs to lock the objects when its done, then set them to the clean version, then release lock
+    //runs periodically, but not frequently
+    public void cleanTimeline(){
 
     }
 

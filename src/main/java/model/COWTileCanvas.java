@@ -5,6 +5,8 @@ import model.constants.CanvasConstants;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import model.Pair;
+import model.CanvasTile;
 
 public class COWTileCanvas implements Canvas{
 
@@ -165,9 +167,11 @@ public class COWTileCanvas implements Canvas{
     public Pair<boolean[][],CanvasTile[][]> getLayerCopy(int layer){
 
 
-        boolean[][] boolCopy = new boolean[tileLayers.get(layer).first().length][];
+        boolean[][] boolCopy = new boolean[tileLayers.get(layer).first().length][tileLayers.get(layer).first()[0].length];
         for(int i=0;i<tileLayers.get(layer).first().length;i++){
-            boolCopy[i] = Arrays.copyOf(tileLayers.get(layer).first()[i] , tileLayers.get(layer).first()[i].length);
+            for(int j=0;j<tileLayers.get(layer).first()[0].length;j++){
+                boolCopy[i][j] = false;
+            }
         }
         CanvasTile[][] canvasCopy = new CanvasTile[tileLayers.get(layer).second().length][];
         for(int i=0;i<tileLayers.get(layer).second().length;i++){
