@@ -63,26 +63,6 @@ public class MemorySmartCanvas implements Canvas{
     }
 
     @Override
-    public int getRed(int x, int y) {
-        return colorLayers.getLast()[y][x].getRed();
-    }
-
-    @Override
-    public int getGreen(int x, int y) {
-        return colorLayers.getLast()[y][x].getGreen();
-    }
-
-    @Override
-    public int getBlue(int x, int y) {
-        return colorLayers.getLast()[y][x].getBlue();
-    }
-
-    @Override
-    public int getAlpha(int x, int y) {
-        return colorLayers.getLast()[y][x].getAlpha();
-    }
-
-    @Override
     public Color getColor(int x, int y) {
         return colorLayers.getLast()[y][x];
     }
