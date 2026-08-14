@@ -77,4 +77,22 @@ public class Draw implements PaintAction, Undoable {
     public UndoStatus getUndoStatus() {
         return status;
     }
+
+    @Override
+    public boolean equals(Object o){
+        if(o instanceof Draw bs){
+            return (prevX==bs.prevX
+                    && prevY==bs.prevY
+                    && x==bs.x
+                    && y==bs.y
+                    && thickness==bs.thickness
+                    && r==bs.r
+                    && g==bs.g
+                    && b==bs.b
+                    && a==bs.a
+                    && id==bs.id
+                    && status == bs.status);
+        }
+        return false;
+    }
 }

@@ -57,26 +57,6 @@ public class CanvasImpl implements Canvas{
     }
 
     @Override
-    public int getRed(int x, int y) {
-        return colorArray[y][x].getRed();
-    }
-
-    @Override
-    public int getGreen(int x, int y) {
-        return colorArray[y][x].getGreen();
-    }
-
-    @Override
-    public int getBlue(int x, int y) {
-        return colorArray[y][x].getBlue();
-    }
-
-    @Override
-    public int getAlpha(int x, int y) {
-        return colorArray[y][x].getAlpha();
-    }
-
-    @Override
     public Color getColor(int x, int y) {
         return colorArray[y][x];
     }

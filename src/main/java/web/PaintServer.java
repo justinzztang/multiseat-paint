@@ -19,7 +19,7 @@ public class PaintServer {
 
     @GetMapping("/canvas")
     public String showCanvas() {
-        return canvas.printCanvas();
+        return canvas.toString();
     }
 
 }

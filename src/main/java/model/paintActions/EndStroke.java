@@ -59,4 +59,16 @@ public class EndStroke implements PaintAction, Undoable {
     public UndoStatus getUndoStatus() {
         return status;
     }
+
+    @Override
+    public boolean equals(Object o){
+        if(o instanceof EndStroke bs){
+            return (x==bs.x
+                    && y==bs.y
+                    && thickness==bs.thickness
+                    && id==bs.id
+                    && status == bs.status);
+        }
+        return false;
+    }
 }

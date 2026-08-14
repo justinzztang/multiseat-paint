@@ -116,7 +116,7 @@ public class StateTracker {
 
     //receive a concrete action that affects the canvas
     //synchronized because every request must be processed in order
-    private int actiontracker = 0;
+    //private int actiontracker = 0;
     public synchronized void receivePaintAction(PaintAction paintAction){
 
         //create if not initialized
@@ -167,8 +167,8 @@ public class StateTracker {
 
         }
         //apply the action
-        System.out.println("applied action #" + actiontracker);
-        actiontracker++;
+        //System.out.println("applied action #" + actiontracker);
+        //actiontracker++;
         paintAction.apply(canvas);
 
         //System.out.println(canvas.printCanvas());
@@ -187,5 +187,15 @@ public class StateTracker {
         return;
     }
 
+    public ArrayList<PaintAction> getTimeline() {
+        return timeline;
+    }
 
+    public HashMap<Integer, ActionPointTracker<Integer>> getActionPointTracker() {
+        return actionPointTracker;
+    }
+
+    public HashMap<Integer, Integer> getPointToCanvasLayer() {
+        return pointToCanvasLayer;
+    }
 }

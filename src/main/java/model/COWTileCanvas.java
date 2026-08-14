@@ -83,26 +83,6 @@ public class COWTileCanvas implements Canvas{
     }
 
     @Override
-    public int getRed(int x, int y) {
-        return getColor(x,y).getRed();
-    }
-
-    @Override
-    public int getGreen(int x, int y) {
-        return getColor(x,y).getGreen();
-    }
-
-    @Override
-    public int getBlue(int x, int y) {
-        return getColor(x,y).getBlue();
-    }
-
-    @Override
-    public int getAlpha(int x, int y) {
-        return getColor(x,y).getAlpha();
-    }
-
-    @Override
     public Color getColor(int x, int y) {
         int tileX = tileCoord(x);
         int tileY = tileCoord(y);
@@ -202,8 +182,8 @@ public class COWTileCanvas implements Canvas{
         return tileLayers.get(layer).second()[tileY][tileX].colorArray[y % CanvasConstants.TILE_SIDE][x % CanvasConstants.TILE_SIDE];
     }
 
-
-    public String printCanvas(){
+    @Override
+    public String toString(){
         StringBuilder canvasString = new StringBuilder();
         for(Color[] row : getTop()){
             for(Color pixel : row){
@@ -215,5 +195,9 @@ public class COWTileCanvas implements Canvas{
         return canvasString.toString();
     }
 
+    //for debugging
+    public ArrayList<Pair<boolean[][], CanvasTile[][]>> getTileLayers() {
+        return tileLayers;
+    }
 }
 
