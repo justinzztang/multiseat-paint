@@ -4,6 +4,7 @@ import model.COWTileCanvas;
 import model.Canvas;
 import model.MemorySmartCanvas;
 import model.helpers.ActionPointTracker;
+import model.helpers.IndexTrackerDLLNode;
 import model.paintActions.PaintAction;
 
 import java.util.ArrayList;
@@ -15,6 +16,6 @@ public interface ControlAction {
     boolean runAction(COWTileCanvas canvas,
                       HashMap<Integer,Integer> pointToCanvasLayer,
                       ArrayList<PaintAction> timeline,
-                      ActionPointTracker<Integer> apt,
+                      ActionPointTracker<IndexTrackerDLLNode> apt,
                       int lcc);
 }

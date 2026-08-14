@@ -7,6 +7,7 @@ import model.controlActions.Redo;
 import model.controlActions.Undo;
 import model.helpers.ActionPointTracker;
 import model.helpers.BoundingBox;
+import model.helpers.IndexTrackerDLLNode;
 import model.paintActions.*;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +25,7 @@ public class StateTrackerTest {
         COWTileCanvas c = new COWTileCanvas(0,10,10);
         StateTracker st = new StateTracker(0, c);
         ArrayList<PaintAction> tl = st.getTimeline();
-        HashMap<Integer, ActionPointTracker<Integer>> apt = st.getActionPointTracker();
+        HashMap<Integer, ActionPointTracker<IndexTrackerDLLNode>> apt = st.getActionPointTracker();
         HashMap<Integer, Integer> ptc = st.getPointToCanvasLayer();
 
         //user id 0 draws something
@@ -43,7 +44,7 @@ public class StateTrackerTest {
         assertEquals(2,c.getNumLayers());
 
         assertNotNull(apt.get(0));
-        assertEquals(0, apt.get(0).getLatestUndoPoint());
+        assertEquals(0, apt.get(0).getLatestUndoPoint().indexNumber);
 
         assertEquals(0, ptc.get(0));
 
@@ -64,7 +65,7 @@ public class StateTrackerTest {
         assertEquals(3,c.getNumLayers());
 
         assertNotNull(apt.get(0));
-        assertEquals(3, apt.get(0).getLatestUndoPoint());
+        assertEquals(3, apt.get(0).getLatestUndoPoint().indexNumber);
 
         assertEquals(1, ptc.get(3)); //the layer we were just on
 
@@ -92,7 +93,7 @@ public class StateTrackerTest {
         COWTileCanvas c = new COWTileCanvas(0,10,10);
         StateTracker st = new StateTracker(0, c);
         ArrayList<PaintAction> tl = st.getTimeline();
-        HashMap<Integer, ActionPointTracker<Integer>> apt = st.getActionPointTracker();
+        HashMap<Integer, ActionPointTracker<IndexTrackerDLLNode>> apt = st.getActionPointTracker();
         HashMap<Integer, Integer> ptc = st.getPointToCanvasLayer();
 
         //user id 0 draws something
@@ -106,23 +107,23 @@ public class StateTrackerTest {
         assertEquals(Color.white, c.getColor(3,3));
         assertEquals(Color.white, c.getColor(5,5));
 
-        assertEquals(0,apt.get(0).getEarliestUnavailableUndoPoint());
-        assertEquals(2,apt.get(0).getEarliestRedoPoint());
+        assertEquals(0,apt.get(0).getEarliestUnavailableUndoPoint().indexNumber);
+        assertEquals(2,apt.get(0).getEarliestRedoPoint().indexNumber);
 
         st.receiveControlAction(new Redo(0));
         assertEquals(Color.black, c.getColor(1,1));
         assertEquals(Color.black, c.getColor(3,3));
         assertEquals(Color.black, c.getColor(5,5));
 
-        assertEquals(0,apt.get(0).getLatestUndoPoint());
-        assertEquals(2,apt.get(0).getLatestUnavailableRedoPoint());
+        assertEquals(0,apt.get(0).getLatestUndoPoint().indexNumber);
+        assertEquals(2,apt.get(0).getLatestUnavailableRedoPoint().indexNumber);
 
         st.receiveControlAction(new Undo(1)); //no effect
         assertEquals(Color.black, c.getColor(1,1));
         assertEquals(Color.black, c.getColor(3,3));
         assertEquals(Color.black, c.getColor(5,5));
-        assertEquals(0,apt.get(0).getLatestUndoPoint());
-        assertEquals(2,apt.get(0).getLatestUnavailableRedoPoint());
+        assertEquals(0,apt.get(0).getLatestUndoPoint().indexNumber);
+        assertEquals(2,apt.get(0).getLatestUnavailableRedoPoint().indexNumber);
 
         st.receiveControlAction(new Undo(0));
         //overwrite
@@ -130,8 +131,8 @@ public class StateTrackerTest {
         st.receivePaintAction(new Draw(1,1,5,1,1,0,0,0,255, 0));
         st.receivePaintAction(new EndStroke(5,1,1,0));
 
-        assertEquals(3,apt.get(0).getLatestUndoPoint());
-        assertEquals(5,apt.get(0).getLatestUnavailableRedoPoint());
+        assertEquals(3,apt.get(0).getLatestUndoPoint().indexNumber);
+        assertEquals(5,apt.get(0).getLatestUnavailableRedoPoint().indexNumber);
         assertTrue(apt.get(0).unavailableUndosEmpty());
         assertTrue(apt.get(0).availableRedosEmpty());
 
@@ -144,7 +145,7 @@ public class StateTrackerTest {
         COWTileCanvas c = new COWTileCanvas(0,10,10);
         StateTracker st = new StateTracker(0, c);
         ArrayList<PaintAction> tl = st.getTimeline();
-        HashMap<Integer, ActionPointTracker<Integer>> apt = st.getActionPointTracker();
+        HashMap<Integer, ActionPointTracker<IndexTrackerDLLNode>> apt = st.getActionPointTracker();
         HashMap<Integer, Integer> ptc = st.getPointToCanvasLayer();
 
         //no update

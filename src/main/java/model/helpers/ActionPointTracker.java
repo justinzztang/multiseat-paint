@@ -1,6 +1,10 @@
 package model.helpers;
 
+import model.constants.CanvasConstants;
+
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.Stack;
 
 
@@ -10,14 +14,21 @@ public class ActionPointTracker<E> {
     private ArrayList<E> undoPoints = new ArrayList<>();
     private ArrayList<E> redoPoints = new ArrayList<>();
 
+    //for deques, last is the top of the stack
+
     //undo points  in the future
-    private Stack<E> unavailableUndos = new Stack<>();
+    private Deque<E> unavailableUndos = new ArrayDeque<>();
     //redo points in the past
-    private Stack<E> unavailableRedos = new Stack<>();
+    private Deque<E> unavailableRedos = new ArrayDeque<>();
     //undo points in the past
-    private Stack<E> availableUndos = new Stack<>();
+    private Deque<E> availableUndos = new ArrayDeque<>();
     //redo points in the future
-    private Stack<E> availableRedos = new Stack<>();
+    private Deque<E> availableRedos = new ArrayDeque<>();
+
+    public E earliestUndo(){
+        if(availableUndos.isEmpty()) return unavailableUndos.getLast();
+        return availableUndos.getFirst();
+    }
 
     public boolean unavailableUndosEmpty(){
         return unavailableUndos.isEmpty();
@@ -34,16 +45,16 @@ public class ActionPointTracker<E> {
 
     public E getLatestUndoPoint() throws Exception {
         if(availableUndos.isEmpty()){
-            throw new Exception("no available undos");
+            throw new Exception("no available undos"); //TODO better exceptions?
         }
-        return availableUndos.peek();
+        return availableUndos.peekLast();
     }
 
     public E getEarliestUnavailableUndoPoint() throws Exception {
         if(unavailableUndos.isEmpty()){
             throw new Exception("no unavailable undos");
         }
-        return unavailableUndos.peek();
+        return unavailableUndos.peekLast();
     }
 
 
@@ -51,14 +62,14 @@ public class ActionPointTracker<E> {
         if(availableRedos.isEmpty()){
             throw new Exception("no available redos");
         }
-        return availableRedos.peek();
+        return availableRedos.peekLast();
     }
 
     public E getLatestUnavailableRedoPoint() throws Exception {
         if(unavailableRedos.isEmpty()){
             throw new Exception("no unavailable redos");
         }
-        return unavailableRedos.peek();
+        return unavailableRedos.peekLast();
     }
 
 
@@ -67,7 +78,10 @@ public class ActionPointTracker<E> {
     public void addUndo(E point){
         //context: user just did an undoable action, so clear unavailable undos and available redos because those are overwritten now
         unavailableUndos.clear();
-        availableUndos.push(point);
+        availableUndos.addLast(point);
+        while(availableUndos.size()> CanvasConstants.UNDO_LIMIT){
+            availableUndos.removeFirst();
+        }
         //clear available redos
         availableRedos.clear();
     }
@@ -77,7 +91,10 @@ public class ActionPointTracker<E> {
         assert(unavailableUndos.isEmpty());
         assert(availableRedos.isEmpty());
         //context: user just finished an undoable action
-        unavailableRedos.push(point);
+        unavailableRedos.addLast(point);
+        while(unavailableRedos.size() > CanvasConstants.UNDO_LIMIT){
+            unavailableRedos.removeFirst();
+        }
     }
 
     //user undid something
@@ -86,9 +103,9 @@ public class ActionPointTracker<E> {
         assert(!availableUndos.isEmpty());
         assert(!unavailableRedos.isEmpty());
         //move last undo to unavailable cause its in the future now
-        unavailableUndos.push(availableUndos.pop());
+        unavailableUndos.addLast(availableUndos.removeLast());
         //move last redo to available cause its in the future now
-        availableRedos.push(unavailableRedos.pop());
+        availableRedos.addLast(unavailableRedos.removeLast());
     }
 
     public void redoUpdate(){
@@ -96,9 +113,9 @@ public class ActionPointTracker<E> {
         assert(!availableRedos.isEmpty());
         assert(!unavailableUndos.isEmpty());
         //move last redo to unavailable cause its in the past now
-        unavailableRedos.push(availableRedos.pop());
+        unavailableRedos.addLast(availableRedos.removeLast());
         //move last undo to available cause its in the past now
-        availableUndos.push(unavailableUndos.pop());
+        availableUndos.addLast(unavailableUndos.removeLast());
     }
 
 

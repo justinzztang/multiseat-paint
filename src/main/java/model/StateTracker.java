@@ -6,6 +6,7 @@ import model.controlActions.Redo;
 import model.controlActions.Undo;
 import model.helpers.ActionPointTracker;
 import model.helpers.BoundingBox;
+import model.helpers.IndexTrackerDLLNode;
 import model.paintActions.*;
 import web.PaintServer;
 
@@ -19,6 +20,9 @@ import java.util.HashMap;
  * The core of the program
  */
 public class StateTracker {
+
+    public IndexTrackerDLLNode indexTrackerStart;
+    public IndexTrackerDLLNode indexTrackerEnd;
 
     private int id;
     private COWTileCanvas canvas;
@@ -59,7 +63,7 @@ public class StateTracker {
     }
 
     /** Stores each player's undo data */
-    private HashMap<Integer, ActionPointTracker<Integer>> actionPointTracker = new HashMap<>();
+    private HashMap<Integer, ActionPointTracker<IndexTrackerDLLNode>> actionPointTracker = new HashMap<>();
 
     public StateTracker(int id, COWTileCanvas canvas){
         this.id = id;
@@ -68,15 +72,15 @@ public class StateTracker {
 
     public int getLCC(){
         ArrayList<Integer> indList = new ArrayList<>();
-        actionPointTracker.forEach((Integer id,ActionPointTracker<Integer> apt) -> {
+        actionPointTracker.forEach((Integer id,ActionPointTracker<IndexTrackerDLLNode> apt) -> {
             try{
-                indList.add(apt.getLatestUndoPoint()); //technically not the latest, but is safe
+                indList.add(apt.getLatestUndoPoint().indexNumber); //technically not the latest, but is safe
             }
             catch (Exception _){
 
             }
             try{
-                indList.add(apt.getEarliestUnavailableUndoPoint()); //technically not the latest, but is safe
+                indList.add(apt.getEarliestUnavailableUndoPoint().indexNumber); //technically not the latest, but is safe
             }
             catch (Exception _){
 
@@ -94,7 +98,7 @@ public class StateTracker {
         if(!actionPointTracker.containsKey(controlAction.getUserID())){
             actionPointTracker.put(controlAction.getUserID(), new ActionPointTracker<>());
         }
-        ActionPointTracker<Integer> apt = actionPointTracker.get(controlAction.getUserID());
+        ActionPointTracker<IndexTrackerDLLNode> apt = actionPointTracker.get(controlAction.getUserID());
 
         this.lcc = getLCC();
         //if you undo, we want to set lsi to this
@@ -127,16 +131,19 @@ public class StateTracker {
         //store it in the timeline
         timeline.add(paintAction);
         int timelineIndex = timeline.size() - 1;
+
+        IndexTrackerDLLNode temp = new IndexTrackerDLLNode(false, timelineIndex, indexTrackerEnd);
+
         //if undoable, track the undo stuff
         if(paintAction instanceof Undoable undoable){
-            ActionPointTracker<Integer> apt = actionPointTracker.get(paintAction.getUserID());
+            ActionPointTracker<IndexTrackerDLLNode> apt = actionPointTracker.get(paintAction.getUserID());
 
             if(undoable.getPointType().equals(Undoable.PointType.UNDOPOINT)){
 
                 //need to overwrite everything after this
                 if(!apt.availableRedosEmpty() || !apt.unavailableUndosEmpty()){
                     try{
-                        int startingIndex = apt.getEarliestUnavailableUndoPoint();
+                        int startingIndex = apt.getEarliestUnavailableUndoPoint().indexNumber;
                         for(int i=startingIndex; i<timeline.size()-1;i++){ //-1 so the new one doesnt get touched
                             if(timeline.get(i).getUserID() == paintAction.getUserID()){
                                 if(timeline.get(i) instanceof Undoable overwrite){
@@ -148,8 +155,8 @@ public class StateTracker {
                         //should never reach here with the if statement check
                     }
                 }
-
-                apt.addUndo(timelineIndex);
+                temp.isIndex = true;
+                apt.addUndo(temp);
                 //need to save a canvas snapshot
                 pointToCanvasLayer.put(timelineIndex, canvas.getNumLayers()-1); //mark the current canvas layer as UNDOPOINT_timelineindex
                 canvas.copyTopLayer(); //creates a new layer on which everything will be applied, preserving the previous (before this copy) layer
@@ -157,7 +164,8 @@ public class StateTracker {
 
             }
             else if(undoable.getPointType().equals(Undoable.PointType.REDOPOINT)){
-                apt.addRedo(timelineIndex);
+                temp.isIndex = true;
+                apt.addRedo(temp);
                 //need to save a canvas snapshot, but AFTER application
                 //paintAction.apply(canvas);
                 //pointToCanvasLayer.put(timelineIndex, canvas.getNumLayers()-1); //mark the current canvas layer as REDOPOINT_timelineindex
@@ -170,6 +178,8 @@ public class StateTracker {
         //System.out.println("applied action #" + actiontracker);
         //actiontracker++;
         paintAction.apply(canvas);
+        indexTrackerEnd = temp;
+        if(indexTrackerStart == null) indexTrackerStart = indexTrackerEnd;
 
         //System.out.println(canvas.printCanvas());
 
@@ -191,7 +201,7 @@ public class StateTracker {
         return timeline;
     }
 
-    public HashMap<Integer, ActionPointTracker<Integer>> getActionPointTracker() {
+    public HashMap<Integer, ActionPointTracker<IndexTrackerDLLNode>> getActionPointTracker() {
         return actionPointTracker;
     }
 

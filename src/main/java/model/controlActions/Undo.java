@@ -4,6 +4,7 @@ import model.COWTileCanvas;
 import model.Canvas;
 import model.MemorySmartCanvas;
 import model.helpers.ActionPointTracker;
+import model.helpers.IndexTrackerDLLNode;
 import model.paintActions.PaintAction;
 import model.paintActions.Undoable;
 
@@ -25,11 +26,11 @@ public class Undo implements ControlAction{
 
     @Override
     public boolean runAction(COWTileCanvas canvas, HashMap<Integer,Integer> pointToCanvasLayer,
-                             ArrayList<PaintAction> timeline, ActionPointTracker<Integer> apt, int lcc) {
+                             ArrayList<PaintAction> timeline, ActionPointTracker<IndexTrackerDLLNode> apt, int lcc) {
         try{
-            int jumpIndex = apt.getLatestUndoPoint();
+            int jumpIndex = apt.getLatestUndoPoint().indexNumber;
             apt.undoUpdate();
-            int redoIndex = apt.getEarliestRedoPoint(); //if undoUpdate shot off correctly, this should always work
+            int redoIndex = apt.getEarliestRedoPoint().indexNumber; //if undoUpdate shot off correctly, this should always work
             //mark everything done by this ID as "undone"
             for(int i=jumpIndex; i<=redoIndex; i++){
                 if(timeline.get(i).getUserID() == userID){

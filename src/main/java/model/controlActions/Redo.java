@@ -4,6 +4,7 @@ import model.COWTileCanvas;
 import model.Canvas;
 import model.MemorySmartCanvas;
 import model.helpers.ActionPointTracker;
+import model.helpers.IndexTrackerDLLNode;
 import model.paintActions.PaintAction;
 import model.paintActions.Undoable;
 
@@ -24,11 +25,11 @@ public class Redo implements ControlAction{
 
     @Override
     public boolean runAction(COWTileCanvas canvas, HashMap<Integer,Integer> pointToCanvasLayer,
-                             ArrayList<PaintAction> timeline, ActionPointTracker<Integer> apt, int lcc) {
+                             ArrayList<PaintAction> timeline, ActionPointTracker<IndexTrackerDLLNode> apt, int lcc) {
         try{
-            int jumpIndex = apt.getEarliestRedoPoint();
+            int jumpIndex = apt.getEarliestRedoPoint().indexNumber;
             apt.redoUpdate();
-            int undoIndex = apt.getLatestUndoPoint(); //if redoUpdate shot off correctly, this should always work
+            int undoIndex = apt.getLatestUndoPoint().indexNumber; //if redoUpdate shot off correctly, this should always work
             //mark everything done by this ID as "done"
             for(int i=undoIndex; i<=jumpIndex; i++){
                 if(timeline.get(i).getUserID() == userID){
