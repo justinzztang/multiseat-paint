@@ -4,7 +4,8 @@ import model.COWTileCanvas;
 import model.Canvas;
 import model.MemorySmartCanvas;
 import model.helpers.ActionPointTracker;
-import model.helpers.IndexTrackerDLLNode;
+import model.helpers.ActionTrackerDLL;
+import model.helpers.ActionTrackerDLLNode;
 import model.paintActions.PaintAction;
 import model.paintActions.Undoable;
 
@@ -24,26 +25,28 @@ public class Redo implements ControlAction{
     }
 
     @Override
-    public boolean runAction(COWTileCanvas canvas, HashMap<IndexTrackerDLLNode,Integer> pointToCanvasLayer,
-                             ArrayList<PaintAction> timeline, ActionPointTracker<IndexTrackerDLLNode> apt, IndexTrackerDLLNode lcc) {
+    public boolean runAction(COWTileCanvas canvas, HashMap<ActionTrackerDLLNode,Integer> pointToCanvasLayer,
+                             ActionTrackerDLL timeline, ActionPointTracker<ActionTrackerDLLNode> apt, ActionTrackerDLLNode lcc) {
         try{
-            int jumpIndex = apt.getEarliestRedoPoint().indexNumber;
+            ActionTrackerDLLNode jumpNode = apt.getEarliestRedoPoint();
             apt.redoUpdate();
-            int undoIndex = apt.getLatestUndoPoint().indexNumber; //if redoUpdate shot off correctly, this should always work
+            ActionTrackerDLLNode undoNode = apt.getLatestUndoPoint(); //if redoUpdate shot off correctly, this should always work
             //mark everything done by this ID as "done"
-            for(int i=undoIndex; i<=jumpIndex; i++){
-                if(timeline.get(i).getUserID() == userID){
+
+            for(ActionTrackerDLLNode node : undoNode){
+                if (node.paintAction.getUserID() == userID){
                     //should be safe, undoable actions come in groups uninterrupted theoretically
-                    ((Undoable)timeline.get(i)).setUndoStatus(Undoable.UndoStatus.DONE);
+                    ((Undoable)node).setUndoStatus(Undoable.UndoStatus.UNDONE);
                 }
+                if(node == jumpNode) break;
             }
 
             //update canvas
-            canvas.setLayer(canvas.getLayerCopy(pointToCanvasLayer.get(lcc))); //TODO bug: this should be LCC
-            for(int i=lcc.indexNumber; i<timeline.size();i++){
-                timeline.get(i).apply(canvas);
-            }
+            canvas.setLayer(canvas.getLayerCopy(pointToCanvasLayer.get(lcc))); //do we need locking here? //TODO we need locking here yeah
 
+            for(ActionTrackerDLLNode node : lcc){
+                node.paintAction.apply(canvas);
+            }
 
 
             return true; //successful

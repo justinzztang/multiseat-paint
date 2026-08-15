@@ -4,7 +4,8 @@ import model.COWTileCanvas;
 import model.Canvas;
 import model.MemorySmartCanvas;
 import model.helpers.ActionPointTracker;
-import model.helpers.IndexTrackerDLLNode;
+import model.helpers.ActionTrackerDLL;
+import model.helpers.ActionTrackerDLLNode;
 import model.paintActions.PaintAction;
 
 import java.util.ArrayList;
@@ -14,8 +15,8 @@ public interface ControlAction {
     int getUserID();
 
     boolean runAction(COWTileCanvas canvas,
-                      HashMap<IndexTrackerDLLNode,Integer> pointToCanvasLayer,
-                      ArrayList<PaintAction> timeline,
-                      ActionPointTracker<IndexTrackerDLLNode> apt,
-                      IndexTrackerDLLNode lcc);
+                      HashMap<ActionTrackerDLLNode,Integer> pointToCanvasLayer,
+                      ActionTrackerDLL timeline,
+                      ActionPointTracker<ActionTrackerDLLNode> apt,
+                      ActionTrackerDLLNode lcc);
 }

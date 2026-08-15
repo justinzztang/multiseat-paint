@@ -5,17 +5,16 @@ import model.controlActions.ControlAction;
 import model.controlActions.Redo;
 import model.controlActions.Undo;
 import model.helpers.ActionPointTracker;
+import model.helpers.ActionTrackerDLLNode;
 import model.helpers.BoundingBox;
-import model.helpers.IndexTrackerDLLNode;
+import model.helpers.ActionTrackerDLL;
 import model.paintActions.*;
 import web.PaintServer;
 
+import javax.swing.*;
 import java.awt.*;
 import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -30,21 +29,19 @@ public class StateTracker {
     int nodeCounter = 0;
 
     //this stuff needs to be locked when copying
-    public IndexTrackerDLLNode indexTrackerDLL = new IndexTrackerDLLNode(false,0, 0);
-    public IndexTrackerDLLNode indexTrackerHead = indexTrackerDLL; //should always be 0 no?
-    public IndexTrackerDLLNode indexTrackerEnd = indexTrackerDLL; //should always be timeline.size()-1 no?
+    public ActionTrackerDLL timeline = new ActionTrackerDLL();
 
     private COWTileCanvas canvas;
     //index -> layer number
-    private HashMap<IndexTrackerDLLNode,Integer> pointToCanvasLayer = new HashMap<>();
-    private IndexTrackerDLLNode lcc = indexTrackerHead;
+    private LinkedHashMap<ActionTrackerDLLNode,Integer> pointerToCanvasLayer = new LinkedHashMap<>();
+    private ActionTrackerDLLNode lcc = ActionTrackerDLLNode.emptyNode;
     /** ArrayList containing user actions in sequence */
-    private ArrayList<PaintAction> timeline = new ArrayList<>();
+    //private ArrayList<PaintAction> timeline = new ArrayList<>();
 
-    public IndexTrackerDLLNode lastSyncIndex = indexTrackerEnd;
+    public ActionTrackerDLLNode lastSyncNode = ActionTrackerDLLNode.emptyNode;
 
     /** Stores each player's undo data */
-    private HashMap<Integer, ActionPointTracker<IndexTrackerDLLNode>> actionPointTracker = new HashMap<>();
+    private HashMap<Integer, ActionPointTracker<ActionTrackerDLLNode>> actionPointTracker = new HashMap<>();
 
     private ReentrantReadWriteLock stateLock = new ReentrantReadWriteLock();
 
@@ -53,10 +50,10 @@ public class StateTracker {
         stateLock.writeLock().lock();
         try{
             if(timeline.isEmpty()){
-                lastSyncIndex = indexTrackerHead;
+                lastSyncNode = ActionTrackerDLLNode.emptyNode;
                 return;
             }
-            lastSyncIndex = indexTrackerEnd;
+            lastSyncNode = timeline.getLast();
         }
         finally{
             stateLock.writeLock().unlock();
@@ -65,12 +62,13 @@ public class StateTracker {
 
     //TODO replace with tiles
     public BoundingBox affectedAreaBoundingBox(boolean shouldUpdate){
-        if(timeline.isEmpty() || lastSyncIndex.indexNumber == timeline.size()-1){
+        if(timeline.isEmpty() || lastSyncNode == timeline.getLast() || lastSyncNode==ActionTrackerDLLNode.emptyNode){
             return new BoundingBox(0,0,0,0);
         }
-        BoundingBox aabb = timeline.get(lastSyncIndex.indexNumber).getBoundingBox();
-        for(int i=lastSyncIndex.indexNumber; i<timeline.size(); i++){
-            aabb = BoundingBox.combine(aabb, timeline.get(i).getBoundingBox());
+        BoundingBox aabb = lastSyncNode.paintAction.getBoundingBox();
+
+        for(ActionTrackerDLLNode node : lastSyncNode){
+            aabb = BoundingBox.combine(aabb, node.paintAction.getBoundingBox());
         }
         if(shouldUpdate){
             updateLSI(); //TODO idk if this actually works, but the idea is that it updates right after all this so the lsi never drifts too far ahead of the timeline size
@@ -83,9 +81,9 @@ public class StateTracker {
         this.canvas = canvas;
     }
 
-    public IndexTrackerDLLNode getLCC(){
-        ArrayList<IndexTrackerDLLNode> indList = new ArrayList<>();
-        actionPointTracker.forEach((Integer id,ActionPointTracker<IndexTrackerDLLNode> apt) -> {
+    public ActionTrackerDLLNode getLCC(){
+        ArrayList<ActionTrackerDLLNode> indList = new ArrayList<>();
+        actionPointTracker.forEach((Integer id,ActionPointTracker<ActionTrackerDLLNode> apt) -> {
             try{
                 indList.add(apt.getLatestUndoPoint()); //technically not the latest, but is safe
             }
@@ -99,7 +97,7 @@ public class StateTracker {
 
             }
         });
-        if(indList.isEmpty()){ return indexTrackerHead; }
+        if(indList.isEmpty()){ return timeline.getFirst(); } //not a single undo
         return Collections.min(indList);
     }
 
@@ -113,19 +111,19 @@ public class StateTracker {
             if (!actionPointTracker.containsKey(controlAction.getUserID())) {
                 actionPointTracker.put(controlAction.getUserID(), new ActionPointTracker<>());
             }
-            ActionPointTracker<IndexTrackerDLLNode> apt = actionPointTracker.get(controlAction.getUserID());
+            ActionPointTracker<ActionTrackerDLLNode> apt = actionPointTracker.get(controlAction.getUserID());
 
             this.lcc = getLCC();
             //if you undo, we want to set lsi to this
             //if you redo, we want to not set lsi to this
             //if(controlAction instanceof Undo || Redo){
-            lastSyncIndex = lcc;
+            lastSyncNode = lcc;
             //}
 
 
             //if(controlAction instanceof Redo){debugBreakpoint();}
 
-            controlAction.runAction(canvas, pointToCanvasLayer, timeline, apt, lcc);
+            controlAction.runAction(canvas, pointerToCanvasLayer, timeline, apt, lcc);
         }
         finally{
             stateLock.writeLock().unlock();
@@ -149,28 +147,27 @@ public class StateTracker {
             }
 
             //store it in the timeline
-            timeline.add(paintAction);
-            int timelineIndex = timeline.size() - 1;
+            ActionTrackerDLLNode action = new ActionTrackerDLLNode(paintAction,nodeCounter);
+            timeline.addLast(action);
 
-            IndexTrackerDLLNode temp = new IndexTrackerDLLNode(false, timelineIndex, indexTrackerEnd,nodeCounter);
-            if(timelineIndex==0){
-                temp = indexTrackerEnd;
-            }
 
             //if undoable, track the undo stuff
             if (paintAction instanceof Undoable undoable) {
-                ActionPointTracker<IndexTrackerDLLNode> apt = actionPointTracker.get(paintAction.getUserID());
+                ActionPointTracker<ActionTrackerDLLNode> apt = actionPointTracker.get(paintAction.getUserID());
 
                 if (undoable.getPointType().equals(Undoable.PointType.UNDOPOINT)) {
 
                     //need to overwrite everything after this
                     if (!apt.availableRedosEmpty() || !apt.unavailableUndosEmpty()) {
                         try {
-                            int startingIndex = apt.getEarliestUnavailableUndoPoint().indexNumber;
-                            for (int i = startingIndex; i < timeline.size() - 1; i++) { //-1 so the new one doesnt get touched
-                                if (timeline.get(i).getUserID() == paintAction.getUserID()) {
-                                    if (timeline.get(i) instanceof Undoable overwrite) {
-                                        overwrite.setUndoStatus(Undoable.UndoStatus.OVERWRITTEN);
+
+                            ActionTrackerDLLNode startingNode = apt.getEarliestUnavailableUndoPoint();
+
+                            for(ActionTrackerDLLNode node : startingNode){
+                                if(node == action) break; //stop at the new one
+                                if(node.paintAction.getUserID() == paintAction.getUserID()){
+                                    if(node.paintAction instanceof Undoable){
+                                        timeline.removeUsingNodeReference(node);
                                     }
                                 }
                             }
@@ -178,16 +175,14 @@ public class StateTracker {
                             //should never reach here with the if statement check
                         }
                     }
-                    temp.isIndex = true;
-                    apt.addUndo(temp);
+                    apt.addUndo(action);
                     //need to save a canvas snapshot
-                    pointToCanvasLayer.put(temp, canvas.getNumLayers() - 1); //mark the current canvas layer as UNDOPOINT_timelineindex
+                    pointerToCanvasLayer.put(action, canvas.getNumLayers() - 1); //mark the current canvas layer as UNDOPOINT_timelineindex
                     canvas.copyTopLayer(); //creates a new layer on which everything will be applied, preserving the previous (before this copy) layer
 
 
                 } else if (undoable.getPointType().equals(Undoable.PointType.REDOPOINT)) {
-                    temp.isIndex = true;
-                    apt.addRedo(temp);
+                    apt.addRedo(action);
                     //need to save a canvas snapshot, but AFTER application
                     //paintAction.apply(canvas);
                     //pointToCanvasLayer.put(timelineIndex, canvas.getNumLayers()-1); //mark the current canvas layer as REDOPOINT_timelineindex
@@ -200,7 +195,7 @@ public class StateTracker {
             //System.out.println("applied action #" + actiontracker);
             //actiontracker++;
             paintAction.apply(canvas);
-            indexTrackerEnd = temp;
+            //indexTrackerEnd = temp;
             nodeCounter++;
         }
         finally {
@@ -216,86 +211,38 @@ public class StateTracker {
     //very "conservatively": a single stroke is about 200 commands, there will be 16 users, and an average of 300 strokes stored for each one (cause some people havent drawn in a long time
     //thats less than 1 million elements in timeline, linear time should work perfectly fine
     //runs periodically, but not frequently
-    public void cleanTimeline(){
+    public void cleanCanvas(){
         //no one else can write
         stateLock.writeLock().lock();
 
         try{
-            ArrayList<PaintAction> filteredTimeline = new ArrayList<>();
 
-            int earliestUndoLimit;
-            ArrayList<Integer> indList = new ArrayList<>();
-            actionPointTracker.forEach((Integer id,ActionPointTracker<IndexTrackerDLLNode> apt) -> {
+            ActionTrackerDLLNode earliestUndoLimitNode;
+            ArrayList<ActionTrackerDLLNode> indList = new ArrayList<>();
+            actionPointTracker.forEach((Integer id,ActionPointTracker<ActionTrackerDLLNode> apt) -> {
                 try{
-                    indList.add(apt.earliestUndo().indexNumber);
+                    indList.add(apt.earliestUndo());
                 }
                 catch (Exception _){
 
                 }
             });
-            if(indList.isEmpty()){ earliestUndoLimit=0; } //no one has ANY undos? probably no ones drawn yet
-            else{ earliestUndoLimit = Collections.min(indList); }
-
-            int curIndex = 0;
-            assert(indexTrackerEnd.indexNumber <= timeline.size());
-            for(IndexTrackerDLLNode node : indexTrackerDLL){
-                boolean add = true;
-                if(curIndex < earliestUndoLimit){ //do not add
-                    add = false;
-                    //splice out the node
-                    node.spliceOut();
-                    if(node.prev==null){
-                        indexTrackerHead = node.next;
-                    }
-                    if(node.next==null){
-                        indexTrackerEnd = node.prev;
-                    }
-                    //if both happen, then we have an empty list, and both head and end are null
-                }
-                else if(timeline.get(curIndex) instanceof Undoable undoable){
-                    if(undoable.getUndoStatus() == Undoable.UndoStatus.OVERWRITTEN){//do not add
-                        add = false;
-                        //splice out the node
-                        node.spliceOut();
-                        if(node.prev==null){
-                            indexTrackerHead = node.next;
-                        }
-                        if(node.next==null){
-                            indexTrackerEnd = node.prev;
-                        }
-                        //if both happen, then we have an empty list, and both head and end are null
-                    }
-                }
-                if(add){
-                    filteredTimeline.add(timeline.get(curIndex));
-                }
-                curIndex++;
-            }
-
-            curIndex = 0;
-            for(IndexTrackerDLLNode node : indexTrackerHead){
-                node.indexNumber = curIndex;
-                curIndex++;
-            }
-            //timeline is filtered, indices are updated
-            timeline = filteredTimeline;
+            if(indList.isEmpty()){ earliestUndoLimitNode = timeline.getFirst(); } //no one has ANY undos? probably no ones drawn yet
+            else{ earliestUndoLimitNode = Collections.min(indList); }
 
             //now flatten canvas, update PTCL (which is in order, as in smaller points have smaller indices),
 
             //find the first layer that doesnt need to be cleaned
             int firstSafeLayer=-1;
-            for(Map.Entry<IndexTrackerDLLNode, Integer> entry : pointToCanvasLayer.entrySet()){
-                if(!entry.getKey().deleted && firstSafeLayer==-1){
+            for(Map.Entry<ActionTrackerDLLNode, Integer> entry : pointerToCanvasLayer.entrySet()){
+                if(entry.getKey().compareTo(earliestUndoLimitNode) >=0 && firstSafeLayer==-1){
                     firstSafeLayer = entry.getValue();
                 }
-                if(firstSafeLayer >=0 ) pointToCanvasLayer.put(entry.getKey(), entry.getValue()-firstSafeLayer); //update the canvas layers
+                if(firstSafeLayer >=0 ) pointerToCanvasLayer.put(entry.getKey(), entry.getValue()-firstSafeLayer); //update the canvas layers
             }
 
             //delete the first few layers of the canvas
             if(firstSafeLayer >=0 ) canvas.getTileLayers().subList(0,firstSafeLayer);
-
-
-
 
         }
         finally{
@@ -308,15 +255,15 @@ public class StateTracker {
         return;
     }
 
-    public ArrayList<PaintAction> getTimeline() {
+    public ActionTrackerDLL getTimeline() {
         return timeline;
     }
 
-    public HashMap<Integer, ActionPointTracker<IndexTrackerDLLNode>> getActionPointTracker() {
+    public HashMap<Integer, ActionPointTracker<ActionTrackerDLLNode>> getActionPointTracker() {
         return actionPointTracker;
     }
 
-    public HashMap<IndexTrackerDLLNode, Integer> getPointToCanvasLayer() {
-        return pointToCanvasLayer;
+    public HashMap<ActionTrackerDLLNode, Integer> getPointerToCanvasLayer() {
+        return pointerToCanvasLayer;
     }
 }
