@@ -24,9 +24,9 @@ function Board(){
     const backgroundCtxRef = useRef<CanvasRenderingContext2D | null>(null);
 
     // the canvas used for making the putimagedata syncs normal
-    const syncCanvas = new OffscreenCanvas(1,1);
+    const syncCanvasRef = useRef<OffscreenCanvas>(new OffscreenCanvas(1,1));
     // the sync canvas context
-    const syncCtx = syncCanvas.getContext("2d");
+    const syncCtxRef = useRef<OffscreenCanvasRenderingContext2D>(syncCanvasRef.current.getContext("2d"));
 
     // last point drawn, used for connecting lines smoothly
     const lastPointRef = useRef<Point | null>(null);
@@ -161,42 +161,51 @@ function Board(){
 
     const receiveSyncMessage = useCallback(
         (msg:IMessage) => {
-            const bytes:Uint8Array = msg.binaryBody;
-            const startingX = (bytes[0] << 8) + (bytes[1]);
-            const startingY = (bytes[2] << 8) + (bytes[3]);
-            const width = (bytes[4] << 8) + (bytes[5]);
-            const height = (bytes[6] << 8) + (bytes[7]);
             const bg = backgroundCtxRef.current;
             if (!bg) return;
 
-            const imageData = bg.createImageData(width, height);
-            const data = imageData.data;
+            const bytes:Uint8Array = msg.binaryBody;
+            const tiles = (bytes[0] << 8) + (bytes[1]);
 
-            let index = 8;
-            for(let y = startingY; y < startingY + height; y++){
-                for(let x = startingX; x < startingX + width; x++){
-                    data[index-8] = bytes[index];
-                    data[index-7] = bytes[index+1];
-                    data[index-6] = bytes[index+2];
-                    data[index-5] = bytes[index+3];
-                    index+=4;
-                }
+            console.log(bytes);
+
+            if(syncCanvasRef.current.width !== width || syncCanvasRef.current.height !== height){
+                syncCanvasRef.current.width = width;
+                syncCanvasRef.current.height = height;
             }
 
-            if(syncCanvas.width !== width || syncCanvas.height !== height){
-                syncCanvas.width = width;
-                syncCanvas.height = height;
-            }
+            let index = 2;
+            for(let i=0;i<tiles;i++){
+                //the next 8 bytes are metadata
+                const startingX = (bytes[index] << 8) + (bytes[index+1]);
+                const startingY = (bytes[index+2] << 8) + (bytes[index+3]);
+                const width = (bytes[index+4] << 8) + (bytes[index+5]);
+                const height = (bytes[index+6] << 8) + (bytes[index+7]);
 
-            syncCtx?.putImageData(imageData,0,0);
+                index +=8;
+
+
+
+                const imageData = bg.createImageData(width, height);
+                const data = imageData.data;
+                //the next width*height*4 bytes are colordata
+                data.set(bytes.subarray(index, index + width*height*4));
+                console.log(startingX, startingY);
+                // @ts-ignore
+                syncCtxRef.current.putImageData(imageData,startingX,startingY);
+                index+=width*height*4;
+
+            }
 
             bg.save();
             //bg.setTransform(1,0,0,1,0,0);
-            bg.drawImage(syncCanvas,startingX,startingY);
+            bg.drawImage(syncCanvasRef.current,0,0);
             bg.restore();
+
+
             transferTopToBackground();
         },
-        [drawCell, transferTopToBackground]
+        [transferTopToBackground]
     );
 
     //problem

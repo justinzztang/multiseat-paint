@@ -38,11 +38,11 @@ public class COWTileCanvas implements Canvas{
                 Color[][] tileColors = new Color[tileHeight][tileWidth];
                 for(int y=0; y< tileHeight; y++){
                     for(int x=0; x<tileWidth;x++){
-                        tileColors[y][x] = Color.white;
+                        tileColors[y][x] = new Color(0,0,0,0); //TODO change back?
                     }
                 }
                 boolLayer[ty/CanvasConstants.TILE_SIDE][tx/CanvasConstants.TILE_SIDE] = true;
-                tileLayer[ty/CanvasConstants.TILE_SIDE][tx/CanvasConstants.TILE_SIDE] = new CanvasTile(tileWidth, tileHeight, tileColors);
+                tileLayer[ty/CanvasConstants.TILE_SIDE][tx/CanvasConstants.TILE_SIDE] = new CanvasTile(tx/CanvasConstants.TILE_SIDE, ty/CanvasConstants.TILE_SIDE, tileWidth, tileHeight, tileColors);
             }
         }
 
@@ -107,7 +107,7 @@ public class COWTileCanvas implements Canvas{
                 //create its own array
                 tileLayers.getLast().first()[tileY][tileX] = true;
                 CanvasTile oldTile = tileLayers.getLast().second()[tileY][tileX];
-                tileLayers.getLast().second()[tileY][tileX] = new CanvasTile(oldTile.width, oldTile.height, CanvasTile.copyColors(oldTile.colorArray));
+                tileLayers.getLast().second()[tileY][tileX] = new CanvasTile(oldTile.tileX, oldTile.tileY, oldTile.width, oldTile.height, CanvasTile.copyColors(oldTile.colorArray));
             }
             tileLayers.getLast().second()[tileY][tileX].colorArray[y % CanvasConstants.TILE_SIDE][x % CanvasConstants.TILE_SIDE] = new Color(r,g,b,a);
         }

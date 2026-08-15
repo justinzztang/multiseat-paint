@@ -3,10 +3,14 @@ package model;
 import java.awt.*;
 
 public class CanvasTile{
-    int width;
-    int height;
-    Color[][] colorArray;
-    CanvasTile(int w, int h, Color[][] colorArray){
+    public int tileX;
+    public int tileY;
+    public int width;
+    public int height;
+    public Color[][] colorArray;
+    CanvasTile(int tileX, int tileY, int w, int h, Color[][] colorArray){
+        this.tileX = tileX;
+        this.tileY = tileY;
         this.width = w;
         this.height = h;
         assert(colorArray.length == h && colorArray[0].length == w);

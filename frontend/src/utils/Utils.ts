@@ -8,6 +8,7 @@ export type WebSocketMessage =
     | {type: "Redo"; userID:number}
     | {type: "IDAssignment"; userID:number}
     | {type: "breakpoint"; userID:number}
+    | {type: "cleanUp"; userID:number}
 
 
 

@@ -1,5 +1,6 @@
 package web;
 
+import model.CanvasTile;
 import model.helpers.BoundingBox;
 import model.helpers.CanvasUtil;
 import org.springframework.messaging.Message;
@@ -10,6 +11,9 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MimeTypeUtils;
+
+import java.awt.*;
+import java.util.Arrays;
 
 
 @Service
@@ -29,8 +33,14 @@ public class Syncer {
         //send to the clients for them to calculate the canvas themselves
 
         //System.out.println("this sync was at:" + PaintServer.stateTracker.lastSyncIndex);
-        BoundingBox aabb = PaintServer.stateTracker.affectedAreaBoundingBox(true);
-        byte[] imageByteStream = CanvasUtil.colorArraySectionToBytestream(PaintServer.canvas.getTop(),aabb.minX, aabb.minY, aabb.maxX, aabb.maxY); //TODO theres a bug where its going based off the last 2 strokes, instead of just 1
+        //BoundingBox aabb = PaintServer.stateTracker.affectedAreaBoundingBox(true);
+
+        PaintServer.stateTracker.stateLock.readLock().lock(); //we don't actually need the lock, only for it to be given the chance
+        PaintServer.stateTracker.stateLock.readLock().unlock();
+
+        CanvasTile[] affectedTiles = PaintServer.stateTracker.affectedAreaTiles(true); //it seems that this is working
+        byte[] imageByteStream = CanvasUtil.tileSetToBytestream(affectedTiles);
+        //byte[] imageByteStream = CanvasUtil.colorArraySectionToBytestream(PaintServer.canvas.getTop(),aabb.minX, aabb.minY, aabb.maxX, aabb.maxY); //TODO theres a bug where its going based off the last 2 strokes, instead of just 1
 
         /*System.out.println("=====");
         System.out.println(aabb.minX);

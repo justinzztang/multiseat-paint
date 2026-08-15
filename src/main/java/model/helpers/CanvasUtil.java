@@ -1,5 +1,8 @@
 package model.helpers;
 
+import model.CanvasTile;
+import model.constants.CanvasConstants;
+
 import java.awt.*;
 import java.io.ByteArrayOutputStream;
 
@@ -62,5 +65,74 @@ public class CanvasUtil {
         }
         return baos.toByteArray();
     }
+
+
+    public static byte[] tileSetToBytestream(CanvasTile[] tiles) {
+
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        //metadata:
+        //number of tiles we send out
+        //big endian
+        baos.write((tiles.length >> 8) & 0xFF); //high bits of length
+        baos.write(tiles.length & 0xFF); //low bits of length
+
+        //then for each tile:
+        for(CanvasTile tile : tiles){
+            int startingX = tile.tileX * CanvasConstants.TILE_SIDE;
+            int startingY = tile.tileY * CanvasConstants.TILE_SIDE;
+            int w = tile.width;
+            int h = tile.height;
+
+            int sxhigh = (startingX >> 8) & 0xFF;
+            int sxlow = startingX & 0xFF;
+
+            int syhigh = (startingY >> 8) & 0xFF;
+            int sylow = startingY & 0xFF;
+
+            int whigh = (w >> 8) & 0xFF;
+            int wlow = w & 0xFF;
+
+            int hhigh = (h >> 8) & 0xFF;
+            int hlow = h & 0xFF;
+
+            //startingx
+            baos.write(sxhigh);
+            baos.write(sxlow);
+
+            //startingy
+            baos.write(syhigh);
+            baos.write(sylow);
+
+            //width
+            baos.write(whigh);
+            baos.write(wlow);
+
+            //height
+            baos.write(hhigh);
+            baos.write(hlow);
+
+            //colordata
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    Color c = tile.colorArray[y][x];
+                    if(c.getAlpha()==0){
+                        baos.write((startingX+startingY+500)/16);
+                        baos.write(0);
+                        baos.write(0);
+                        baos.write(255);
+                        continue;
+                    }
+                    baos.write(c.getRed());
+                    baos.write(c.getGreen());
+                    baos.write(c.getBlue());
+                    baos.write(c.getAlpha());
+                }
+            }
+        }
+
+        return baos.toByteArray();
+    }
+
 
 }

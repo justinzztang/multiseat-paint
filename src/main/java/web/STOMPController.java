@@ -1,5 +1,6 @@
 package web;
 
+import model.CanvasTile;
 import model.controlActions.ControlAction;
 import model.controlActions.Redo;
 import model.controlActions.Undo;
@@ -26,6 +27,10 @@ import org.springframework.web.socket.messaging.SessionSubscribeEvent;
 import web.helpers.DTO.ServerMessageDTO;
 import web.helpers.DTO.UserActionDTO;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 @Controller
 public class STOMPController {
 
@@ -50,6 +55,7 @@ public class STOMPController {
         };
 
         if(action.type.equals("breakpoint")) PaintServer.stateTracker.debugBreakpoint();
+        if(action.type.equals("cleanUp")) PaintServer.stateTracker.cleanTimeline();
 
         if(paintAction != null){
             PaintServer.stateTracker.receivePaintAction(paintAction);
@@ -70,7 +76,13 @@ public class STOMPController {
         StompCommand command = headers.getCommand();
         if(command == null || headers.getDestination() == null || !headers.getDestination().startsWith("/user") || !command.equals(StompCommand.SUBSCRIBE)) return;
 
-        byte[] imageByteStream = CanvasUtil.colorArraySectionToBytestream(PaintServer.canvas.getTop(),0, 0, PaintServer.canvas.getWidth()-1, PaintServer.canvas.getHeight()-1);
+
+        List<CanvasTile> tileSet = new ArrayList<>();
+        for(CanvasTile[] row : PaintServer.canvas.getTileLayers().getLast().second()){
+            tileSet.addAll(Arrays.asList(row));
+        }
+        byte[] imageByteStream = CanvasUtil.tileSetToBytestream(tileSet.toArray(new CanvasTile[0]));
+
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.MESSAGE);
         accessor.setContentType(MimeTypeUtils.APPLICATION_OCTET_STREAM);
         accessor.setLeaveMutable(true);

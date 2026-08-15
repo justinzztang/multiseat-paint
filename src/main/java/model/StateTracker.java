@@ -12,10 +12,7 @@ import web.PaintServer;
 
 import java.awt.*;
 import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -36,7 +33,7 @@ public class StateTracker {
 
     private COWTileCanvas canvas;
     //index -> layer number
-    private HashMap<IndexTrackerDLLNode,Integer> pointToCanvasLayer = new HashMap<>();
+    private LinkedHashMap<IndexTrackerDLLNode,Integer> pointToCanvasLayer = new LinkedHashMap<>();
     private IndexTrackerDLLNode lcc = indexTrackerHead;
     /** ArrayList containing user actions in sequence */
     private ArrayList<PaintAction> timeline = new ArrayList<>();
@@ -46,7 +43,7 @@ public class StateTracker {
     /** Stores each player's undo data */
     private HashMap<Integer, ActionPointTracker<IndexTrackerDLLNode>> actionPointTracker = new HashMap<>();
 
-    private ReentrantReadWriteLock stateLock = new ReentrantReadWriteLock();
+    public ReentrantReadWriteLock stateLock = new ReentrantReadWriteLock(true);
 
 
     public void updateLSI(){
@@ -77,6 +74,34 @@ public class StateTracker {
         }
         return aabb;
     }
+
+    public CanvasTile[] affectedAreaTiles(boolean shouldUpdate){
+        if(timeline.isEmpty() || lastSyncIndex.indexNumber == timeline.size()-1){
+            return new CanvasTile[]{}; //empty
+        }
+        Set<CanvasTile> affectedTiles = new HashSet<>();
+        for(int i=lastSyncIndex.indexNumber+1; i<timeline.size(); i++){
+            BoundingBox bb = timeline.get(i).getBoundingBox();
+
+            int minXTile = bb.minX / CanvasConstants.TILE_SIDE;
+            int maxXTile = bb.maxX / CanvasConstants.TILE_SIDE;
+            int minYTile = bb.minY / CanvasConstants.TILE_SIDE;
+            int maxYTile = bb.maxY / CanvasConstants.TILE_SIDE;
+
+            for(int y = minYTile;y<=maxYTile;y++){
+                for(int x = minXTile;x<=maxXTile;x++){
+                    affectedTiles.add(canvas.getTileLayers().getLast().second()[y][x]);
+                }
+            }
+
+
+        }
+        if(shouldUpdate){
+            updateLSI();
+        }
+        return affectedTiles.toArray(new CanvasTile[0]);
+    }
+
 
     public StateTracker(int id, COWTileCanvas canvas){
         this.id = id;
@@ -121,11 +146,16 @@ public class StateTracker {
             //if(controlAction instanceof Undo || Redo){
             lastSyncIndex = lcc;
             //}
-
+            System.out.println(lcc.indexNumber);
 
             //if(controlAction instanceof Redo){debugBreakpoint();}
-
-            controlAction.runAction(canvas, pointToCanvasLayer, timeline, apt, lcc);
+            stateLock.readLock().lock();
+            try {
+                controlAction.runAction(canvas, pointToCanvasLayer, timeline, apt, lcc);
+            }
+            finally{
+                stateLock.readLock().unlock();
+            }
         }
         finally{
             stateLock.writeLock().unlock();
