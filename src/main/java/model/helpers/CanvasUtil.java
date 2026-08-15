@@ -116,13 +116,7 @@ public class CanvasUtil {
             for (int y = 0; y < h; y++) {
                 for (int x = 0; x < w; x++) {
                     Color c = tile.colorArray[y][x];
-                    if(c.getAlpha()==0){
-                        baos.write((startingX+startingY+500)/16);
-                        baos.write(0);
-                        baos.write(0);
-                        baos.write(255);
-                        continue;
-                    }
+
                     baos.write(c.getRed());
                     baos.write(c.getGreen());
                     baos.write(c.getBlue());

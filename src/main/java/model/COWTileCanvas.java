@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import model.Pair;
 import model.CanvasTile;
+import model.helpers.DrawUtil;
 
 public class COWTileCanvas implements Canvas{
 
@@ -101,7 +102,7 @@ public class COWTileCanvas implements Canvas{
         int tileY = tileCoord(y);
 
         Color tileColor = getColor(x,y);
-        if(!tileColor.equals(new Color(r,g,b,a))){
+        if(!tileColor.equals(new Color(r,g,b,a)) || a!=255){ //caveat for transparency
             //if its not an original copy, make a new copy
             if(!tileLayers.getLast().first()[tileY][tileX]){
                 //create its own array
@@ -109,7 +110,13 @@ public class COWTileCanvas implements Canvas{
                 CanvasTile oldTile = tileLayers.getLast().second()[tileY][tileX];
                 tileLayers.getLast().second()[tileY][tileX] = new CanvasTile(oldTile.tileX, oldTile.tileY, oldTile.width, oldTile.height, CanvasTile.copyColors(oldTile.colorArray));
             }
-            tileLayers.getLast().second()[tileY][tileX].colorArray[y % CanvasConstants.TILE_SIDE][x % CanvasConstants.TILE_SIDE] = new Color(r,g,b,a);
+
+            if(a==255){
+                tileLayers.getLast().second()[tileY][tileX].colorArray[y % CanvasConstants.TILE_SIDE][x % CanvasConstants.TILE_SIDE] = new Color(r,g,b,a);
+            }else{
+                Color nc = DrawUtil.compositeOver(tileColor, new Color(r,g,b,a));
+                tileLayers.getLast().second()[tileY][tileX].colorArray[y % CanvasConstants.TILE_SIDE][x % CanvasConstants.TILE_SIDE] = nc;
+            }
         }
 
     }

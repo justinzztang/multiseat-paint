@@ -38,4 +38,27 @@ public class DrawUtil {
 
         return points.toArray(new Point[0]);
     }
+
+    //https://stackoverflow.com/questions/7438263/alpha-compositing-algorithm-blend-modes
+    public static Color compositeOver(Color bg, Color fg){
+
+        int newAlpha = (bg.getAlpha()*255 + fg.getAlpha()*255 - bg.getAlpha() * fg.getAlpha())/255;
+
+        int bgR = bg.getRed() * bg.getAlpha();
+        int fgR = fg.getRed() * fg.getAlpha();
+        int newR = fgR*255 + bgR * (255 - fg.getAlpha());
+        newR = newR / 255 / newAlpha;
+
+        int bgG = bg.getGreen() * bg.getAlpha();
+        int fgG = fg.getGreen() * fg.getAlpha();
+        int newG = fgG*255 + bgG * (255 - fg.getAlpha());
+        newG = newG / 255 / newAlpha;
+
+        int bgB = bg.getBlue() * bg.getAlpha();
+        int fgB = fg.getBlue() * fg.getAlpha();
+        int newB = fgB*255 + bgB * (255 - fg.getAlpha());
+        newB = newB / 255 / newAlpha;
+
+        return new Color(newR, newG, newB, newAlpha);
+    }
 }

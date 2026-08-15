@@ -193,14 +193,25 @@ function Board(){
                 console.log(startingX, startingY);
                 // @ts-ignore
                 syncCtxRef.current.putImageData(imageData,startingX,startingY);
+
+                bg.clearRect(startingX,startingY,width,height);
+                bg.drawImage(
+                    syncCanvasRef.current,
+                    startingX, startingY, width, height,
+                    startingX, startingY, width, height
+                );
+
                 index+=width*height*4;
 
             }
 
+            /*
             bg.save();
             //bg.setTransform(1,0,0,1,0,0);
             bg.drawImage(syncCanvasRef.current,0,0);
             bg.restore();
+            */
+
 
 
             transferTopToBackground();
