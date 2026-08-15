@@ -11,9 +11,12 @@ import model.paintActions.*;
 import web.PaintServer;
 
 import java.awt.*;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Tracks and handles actions and canvas states, allowing undoing/redoing functionality
@@ -21,39 +24,52 @@ import java.util.HashMap;
  */
 public class StateTracker {
 
-    public IndexTrackerDLLNode indexTrackerStart;
-    public IndexTrackerDLLNode indexTrackerEnd;
-
     private int id;
+    public int uniqueUsers = 0;
+
+    int nodeCounter = 0;
+
+    //this stuff needs to be locked when copying
+    public IndexTrackerDLLNode indexTrackerDLL = new IndexTrackerDLLNode(false,0, 0);
+    public IndexTrackerDLLNode indexTrackerHead = indexTrackerDLL; //should always be 0 no?
+    public IndexTrackerDLLNode indexTrackerEnd = indexTrackerDLL; //should always be timeline.size()-1 no?
+
     private COWTileCanvas canvas;
-    private HashMap<Integer,Integer> pointToCanvasLayer = new HashMap<>();
-    private int lcc = 0;
-
-    //timeline:some data structure that allows ordered storage and O(1) lookups
-    //undopointtracker:some data structure that allows ordered storage and O(1) addition and removal of latest element
-
-
-
+    //index -> layer number
+    private HashMap<IndexTrackerDLLNode,Integer> pointToCanvasLayer = new HashMap<>();
+    private IndexTrackerDLLNode lcc = indexTrackerHead;
     /** ArrayList containing user actions in sequence */
     private ArrayList<PaintAction> timeline = new ArrayList<>();
 
-    public int lastSyncIndex = 0;
-    public int uniqueUsers = 0;
+    public IndexTrackerDLLNode lastSyncIndex = indexTrackerEnd;
+
+    /** Stores each player's undo data */
+    private HashMap<Integer, ActionPointTracker<IndexTrackerDLLNode>> actionPointTracker = new HashMap<>();
+
+    private ReentrantReadWriteLock stateLock = new ReentrantReadWriteLock();
+
 
     public void updateLSI(){
-        if(timeline.isEmpty()){
-            lastSyncIndex = 0;
-            return;
+        stateLock.writeLock().lock();
+        try{
+            if(timeline.isEmpty()){
+                lastSyncIndex = indexTrackerHead;
+                return;
+            }
+            lastSyncIndex = indexTrackerEnd;
         }
-        lastSyncIndex = timeline.size()-1;
+        finally{
+            stateLock.writeLock().unlock();
+        }
     }
 
+    //TODO replace with tiles
     public BoundingBox affectedAreaBoundingBox(boolean shouldUpdate){
-        if(timeline.isEmpty() || lastSyncIndex == timeline.size()-1){
+        if(timeline.isEmpty() || lastSyncIndex.indexNumber == timeline.size()-1){
             return new BoundingBox(0,0,0,0);
         }
-        BoundingBox aabb = timeline.get(lastSyncIndex).getBoundingBox();
-        for(int i=lastSyncIndex; i<timeline.size(); i++){
+        BoundingBox aabb = timeline.get(lastSyncIndex.indexNumber).getBoundingBox();
+        for(int i=lastSyncIndex.indexNumber; i<timeline.size(); i++){
             aabb = BoundingBox.combine(aabb, timeline.get(i).getBoundingBox());
         }
         if(shouldUpdate){
@@ -62,31 +78,28 @@ public class StateTracker {
         return aabb;
     }
 
-    /** Stores each player's undo data */
-    private HashMap<Integer, ActionPointTracker<IndexTrackerDLLNode>> actionPointTracker = new HashMap<>();
-
     public StateTracker(int id, COWTileCanvas canvas){
         this.id = id;
         this.canvas = canvas;
     }
 
-    public int getLCC(){
-        ArrayList<Integer> indList = new ArrayList<>();
+    public IndexTrackerDLLNode getLCC(){
+        ArrayList<IndexTrackerDLLNode> indList = new ArrayList<>();
         actionPointTracker.forEach((Integer id,ActionPointTracker<IndexTrackerDLLNode> apt) -> {
             try{
-                indList.add(apt.getLatestUndoPoint().indexNumber); //technically not the latest, but is safe
+                indList.add(apt.getLatestUndoPoint()); //technically not the latest, but is safe
             }
             catch (Exception _){
 
             }
             try{
-                indList.add(apt.getEarliestUnavailableUndoPoint().indexNumber); //technically not the latest, but is safe
+                indList.add(apt.getEarliestUnavailableUndoPoint()); //technically not the latest, but is safe
             }
             catch (Exception _){
 
             }
         });
-        if(indList.isEmpty()){ return 0; }
+        if(indList.isEmpty()){ return indexTrackerHead; }
         return Collections.min(indList);
     }
 
@@ -94,24 +107,29 @@ public class StateTracker {
     //synchronized because every request must be processed in order
     public synchronized void receiveControlAction(ControlAction controlAction){
 
-        //create if not initialized
-        if(!actionPointTracker.containsKey(controlAction.getUserID())){
-            actionPointTracker.put(controlAction.getUserID(), new ActionPointTracker<>());
-        }
-        ActionPointTracker<IndexTrackerDLLNode> apt = actionPointTracker.get(controlAction.getUserID());
+        stateLock.writeLock().lock();
+        try {
+            //create if not initialized
+            if (!actionPointTracker.containsKey(controlAction.getUserID())) {
+                actionPointTracker.put(controlAction.getUserID(), new ActionPointTracker<>());
+            }
+            ActionPointTracker<IndexTrackerDLLNode> apt = actionPointTracker.get(controlAction.getUserID());
 
-        this.lcc = getLCC();
-        //if you undo, we want to set lsi to this
-        //if you redo, we want to not set lsi to this
-        //if(controlAction instanceof Undo || Redo){
+            this.lcc = getLCC();
+            //if you undo, we want to set lsi to this
+            //if you redo, we want to not set lsi to this
+            //if(controlAction instanceof Undo || Redo){
             lastSyncIndex = lcc;
-        //}
+            //}
 
 
-        //if(controlAction instanceof Redo){debugBreakpoint();}
+            //if(controlAction instanceof Redo){debugBreakpoint();}
 
-        controlAction.runAction(canvas, pointToCanvasLayer, timeline, apt, lcc);
-
+            controlAction.runAction(canvas, pointToCanvasLayer, timeline, apt, lcc);
+        }
+        finally{
+            stateLock.writeLock().unlock();
+        }
 
         //System.out.println(canvas.printCanvas());
 
@@ -123,73 +141,166 @@ public class StateTracker {
     //private int actiontracker = 0;
     public synchronized void receivePaintAction(PaintAction paintAction){
 
-        //create if not initialized
-        if(!actionPointTracker.containsKey(paintAction.getUserID())){
-            actionPointTracker.put(paintAction.getUserID(), new ActionPointTracker<>());
-        }
+        stateLock.writeLock().lock();
+        try {
+            //create if not initialized
+            if (!actionPointTracker.containsKey(paintAction.getUserID())) {
+                actionPointTracker.put(paintAction.getUserID(), new ActionPointTracker<>());
+            }
 
-        //store it in the timeline
-        timeline.add(paintAction);
-        int timelineIndex = timeline.size() - 1;
+            //store it in the timeline
+            timeline.add(paintAction);
+            int timelineIndex = timeline.size() - 1;
 
-        IndexTrackerDLLNode temp = new IndexTrackerDLLNode(false, timelineIndex, indexTrackerEnd);
+            IndexTrackerDLLNode temp = new IndexTrackerDLLNode(false, timelineIndex, indexTrackerEnd,nodeCounter);
+            if(timelineIndex==0){
+                temp = indexTrackerEnd;
+            }
 
-        //if undoable, track the undo stuff
-        if(paintAction instanceof Undoable undoable){
-            ActionPointTracker<IndexTrackerDLLNode> apt = actionPointTracker.get(paintAction.getUserID());
+            //if undoable, track the undo stuff
+            if (paintAction instanceof Undoable undoable) {
+                ActionPointTracker<IndexTrackerDLLNode> apt = actionPointTracker.get(paintAction.getUserID());
 
-            if(undoable.getPointType().equals(Undoable.PointType.UNDOPOINT)){
+                if (undoable.getPointType().equals(Undoable.PointType.UNDOPOINT)) {
 
-                //need to overwrite everything after this
-                if(!apt.availableRedosEmpty() || !apt.unavailableUndosEmpty()){
-                    try{
-                        int startingIndex = apt.getEarliestUnavailableUndoPoint().indexNumber;
-                        for(int i=startingIndex; i<timeline.size()-1;i++){ //-1 so the new one doesnt get touched
-                            if(timeline.get(i).getUserID() == paintAction.getUserID()){
-                                if(timeline.get(i) instanceof Undoable overwrite){
-                                    overwrite.setUndoStatus(Undoable.UndoStatus.OVERWRITTEN);
+                    //need to overwrite everything after this
+                    if (!apt.availableRedosEmpty() || !apt.unavailableUndosEmpty()) {
+                        try {
+                            int startingIndex = apt.getEarliestUnavailableUndoPoint().indexNumber;
+                            for (int i = startingIndex; i < timeline.size() - 1; i++) { //-1 so the new one doesnt get touched
+                                if (timeline.get(i).getUserID() == paintAction.getUserID()) {
+                                    if (timeline.get(i) instanceof Undoable overwrite) {
+                                        overwrite.setUndoStatus(Undoable.UndoStatus.OVERWRITTEN);
+                                    }
                                 }
                             }
+                        } catch (Exception _) {
+                            //should never reach here with the if statement check
                         }
-                    } catch (Exception _){
-                        //should never reach here with the if statement check
                     }
+                    temp.isIndex = true;
+                    apt.addUndo(temp);
+                    //need to save a canvas snapshot
+                    pointToCanvasLayer.put(temp, canvas.getNumLayers() - 1); //mark the current canvas layer as UNDOPOINT_timelineindex
+                    canvas.copyTopLayer(); //creates a new layer on which everything will be applied, preserving the previous (before this copy) layer
+
+
+                } else if (undoable.getPointType().equals(Undoable.PointType.REDOPOINT)) {
+                    temp.isIndex = true;
+                    apt.addRedo(temp);
+                    //need to save a canvas snapshot, but AFTER application
+                    //paintAction.apply(canvas);
+                    //pointToCanvasLayer.put(timelineIndex, canvas.getNumLayers()-1); //mark the current canvas layer as REDOPOINT_timelineindex
+                    //canvas.copyTopLayer(); //creates a new layer on which everything after will be applied, preserving the previous (before this copy) layer
+                    //return; //TODO this might need to change in the future
                 }
-                temp.isIndex = true;
-                apt.addUndo(temp);
-                //need to save a canvas snapshot
-                pointToCanvasLayer.put(timelineIndex, canvas.getNumLayers()-1); //mark the current canvas layer as UNDOPOINT_timelineindex
-                canvas.copyTopLayer(); //creates a new layer on which everything will be applied, preserving the previous (before this copy) layer
-
 
             }
-            else if(undoable.getPointType().equals(Undoable.PointType.REDOPOINT)){
-                temp.isIndex = true;
-                apt.addRedo(temp);
-                //need to save a canvas snapshot, but AFTER application
-                //paintAction.apply(canvas);
-                //pointToCanvasLayer.put(timelineIndex, canvas.getNumLayers()-1); //mark the current canvas layer as REDOPOINT_timelineindex
-                //canvas.copyTopLayer(); //creates a new layer on which everything after will be applied, preserving the previous (before this copy) layer
-                //return; //TODO this might need to change in the future
-            }
-
+            //apply the action
+            //System.out.println("applied action #" + actiontracker);
+            //actiontracker++;
+            paintAction.apply(canvas);
+            indexTrackerEnd = temp;
+            nodeCounter++;
         }
-        //apply the action
-        //System.out.println("applied action #" + actiontracker);
-        //actiontracker++;
-        paintAction.apply(canvas);
-        indexTrackerEnd = temp;
-        if(indexTrackerStart == null) indexTrackerStart = indexTrackerEnd;
-
+        finally {
+            stateLock.writeLock().unlock();
+        }
         //System.out.println(canvas.printCanvas());
 
     }
 
     //clean up timeline, getting rid of unreachable canvases (past the undo limit), removing overwritten commands, and changing the tracker stuff
-    //can do the cleaning on a separate thread by copying everything, then cleaning it
-    //needs to lock the objects when its done, then set them to the clean version, then release lock
+    //locks the state and prevents writing (but not reading)
+    //filtering the timeline and updating numbers is linear in the number of elements in the timeline
+    //very "conservatively": a single stroke is about 200 commands, there will be 16 users, and an average of 300 strokes stored for each one (cause some people havent drawn in a long time
+    //thats less than 1 million elements in timeline, linear time should work perfectly fine
     //runs periodically, but not frequently
     public void cleanTimeline(){
+        //no one else can write
+        stateLock.writeLock().lock();
+
+        try{
+            ArrayList<PaintAction> filteredTimeline = new ArrayList<>();
+
+            int earliestUndoLimit;
+            ArrayList<Integer> indList = new ArrayList<>();
+            actionPointTracker.forEach((Integer id,ActionPointTracker<IndexTrackerDLLNode> apt) -> {
+                try{
+                    indList.add(apt.earliestUndo().indexNumber);
+                }
+                catch (Exception _){
+
+                }
+            });
+            if(indList.isEmpty()){ earliestUndoLimit=0; } //no one has ANY undos? probably no ones drawn yet
+            else{ earliestUndoLimit = Collections.min(indList); }
+
+            int curIndex = 0;
+            assert(indexTrackerEnd.indexNumber <= timeline.size());
+            for(IndexTrackerDLLNode node : indexTrackerDLL){
+                boolean add = true;
+                if(curIndex < earliestUndoLimit){ //do not add
+                    add = false;
+                    //splice out the node
+                    node.spliceOut();
+                    if(node.prev==null){
+                        indexTrackerHead = node.next;
+                    }
+                    if(node.next==null){
+                        indexTrackerEnd = node.prev;
+                    }
+                    //if both happen, then we have an empty list, and both head and end are null
+                }
+                else if(timeline.get(curIndex) instanceof Undoable undoable){
+                    if(undoable.getUndoStatus() == Undoable.UndoStatus.OVERWRITTEN){//do not add
+                        add = false;
+                        //splice out the node
+                        node.spliceOut();
+                        if(node.prev==null){
+                            indexTrackerHead = node.next;
+                        }
+                        if(node.next==null){
+                            indexTrackerEnd = node.prev;
+                        }
+                        //if both happen, then we have an empty list, and both head and end are null
+                    }
+                }
+                if(add){
+                    filteredTimeline.add(timeline.get(curIndex));
+                }
+                curIndex++;
+            }
+
+            curIndex = 0;
+            for(IndexTrackerDLLNode node : indexTrackerHead){
+                node.indexNumber = curIndex;
+                curIndex++;
+            }
+            //timeline is filtered, indices are updated
+            timeline = filteredTimeline;
+
+            //now flatten canvas, update PTCL (which is in order, as in smaller points have smaller indices),
+
+            //find the first layer that doesnt need to be cleaned
+            int firstSafeLayer=-1;
+            for(Map.Entry<IndexTrackerDLLNode, Integer> entry : pointToCanvasLayer.entrySet()){
+                if(!entry.getKey().deleted && firstSafeLayer==-1){
+                    firstSafeLayer = entry.getValue();
+                }
+                if(firstSafeLayer >=0 ) pointToCanvasLayer.put(entry.getKey(), entry.getValue()-firstSafeLayer); //update the canvas layers
+            }
+
+            //delete the first few layers of the canvas
+            if(firstSafeLayer >=0 ) canvas.getTileLayers().subList(0,firstSafeLayer);
+
+
+
+
+        }
+        finally{
+            stateLock.writeLock().unlock();
+        }
 
     }
 
@@ -205,7 +316,7 @@ public class StateTracker {
         return actionPointTracker;
     }
 
-    public HashMap<Integer, Integer> getPointToCanvasLayer() {
+    public HashMap<IndexTrackerDLLNode, Integer> getPointToCanvasLayer() {
         return pointToCanvasLayer;
     }
 }

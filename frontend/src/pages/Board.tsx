@@ -11,8 +11,8 @@ import {bresenhamLine} from "../utils/Bresenham.ts";
 function Board(){
 
     const GRID_SIZE = 1;
-    var width = 1000;
-    var height = 1000;
+    const width = 1000;
+    const height = 1000;
 
     // the top canvas
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -332,13 +332,20 @@ function Board(){
         },[ sendWebSocketMessage, userID]
     );
 
+    const cleanUp = useCallback(
+        () => {
+            sendWebSocketMessage({type: "cleanUp", userID: userID});
+        },[ sendWebSocketMessage, userID]
+    );
+
     return(
         <>
             <div className="bg-gray-200 h-max">
                 <button onClick={connectWebSocket}>connect|</button>
                 <button onClick={sendUndo}>undo|</button>
                 <button onClick={sendRedo}>redo|</button>
-                <button onClick={breakpoint}>breakpoint</button>
+                <button onClick={breakpoint}>breakpoint|</button>
+                <button onClick={cleanUp}>clean</button>
                 <input ref={colorRef} type="color" id="strokeColor" name="strokeColor"></input>
                 <div className="relative ml-10" style={{ width: `${width}px`, height: `${height}px` }}>
                     <canvas

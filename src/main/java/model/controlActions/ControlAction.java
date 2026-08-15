@@ -14,8 +14,8 @@ public interface ControlAction {
     int getUserID();
 
     boolean runAction(COWTileCanvas canvas,
-                      HashMap<Integer,Integer> pointToCanvasLayer,
+                      HashMap<IndexTrackerDLLNode,Integer> pointToCanvasLayer,
                       ArrayList<PaintAction> timeline,
                       ActionPointTracker<IndexTrackerDLLNode> apt,
-                      int lcc);
+                      IndexTrackerDLLNode lcc);
 }

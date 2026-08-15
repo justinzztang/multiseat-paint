@@ -195,7 +195,6 @@ public class COWTileCanvas implements Canvas{
         return canvasString.toString();
     }
 
-    //for debugging
     public ArrayList<Pair<boolean[][], CanvasTile[][]>> getTileLayers() {
         return tileLayers;
     }

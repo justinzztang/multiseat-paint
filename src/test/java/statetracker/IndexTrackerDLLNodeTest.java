@@ -9,11 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class IndexTrackerDLLNodeTest {
     @Test
     public void spliceTests() throws Exception {
-        IndexTrackerDLLNode fst = new IndexTrackerDLLNode(false, 0);
-        IndexTrackerDLLNode lst = new IndexTrackerDLLNode(false, 1,fst);
-        lst = new IndexTrackerDLLNode(true, 2, lst);
-        lst = new IndexTrackerDLLNode(false, 3, lst);
-        lst = new IndexTrackerDLLNode(true, 4, lst);
+        IndexTrackerDLLNode fst = new IndexTrackerDLLNode(false, 0,0);
+        IndexTrackerDLLNode lst = new IndexTrackerDLLNode(false, 1,fst,1);
+        lst = new IndexTrackerDLLNode(true, 2, lst,2);
+        lst = new IndexTrackerDLLNode(false, 3, lst,3);
+        lst = new IndexTrackerDLLNode(true, 4, lst,4);
 
         IndexTrackerDLLNode curNode = fst;
         curNode = curNode.next;

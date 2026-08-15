@@ -24,8 +24,8 @@ public class Redo implements ControlAction{
     }
 
     @Override
-    public boolean runAction(COWTileCanvas canvas, HashMap<Integer,Integer> pointToCanvasLayer,
-                             ArrayList<PaintAction> timeline, ActionPointTracker<IndexTrackerDLLNode> apt, int lcc) {
+    public boolean runAction(COWTileCanvas canvas, HashMap<IndexTrackerDLLNode,Integer> pointToCanvasLayer,
+                             ArrayList<PaintAction> timeline, ActionPointTracker<IndexTrackerDLLNode> apt, IndexTrackerDLLNode lcc) {
         try{
             int jumpIndex = apt.getEarliestRedoPoint().indexNumber;
             apt.redoUpdate();
@@ -40,7 +40,7 @@ public class Redo implements ControlAction{
 
             //update canvas
             canvas.setLayer(canvas.getLayerCopy(pointToCanvasLayer.get(lcc))); //TODO bug: this should be LCC
-            for(int i=lcc; i<timeline.size();i++){
+            for(int i=lcc.indexNumber; i<timeline.size();i++){
                 timeline.get(i).apply(canvas);
             }
 

@@ -26,7 +26,7 @@ public class StateTrackerTest {
         StateTracker st = new StateTracker(0, c);
         ArrayList<PaintAction> tl = st.getTimeline();
         HashMap<Integer, ActionPointTracker<IndexTrackerDLLNode>> apt = st.getActionPointTracker();
-        HashMap<Integer, Integer> ptc = st.getPointToCanvasLayer();
+        HashMap<IndexTrackerDLLNode, Integer> ptc = st.getPointToCanvasLayer();
 
         //user id 0 draws something
         st.receivePaintAction(new BeginStroke(1,1,1,0,0,0,255, 0));
@@ -46,7 +46,7 @@ public class StateTrackerTest {
         assertNotNull(apt.get(0));
         assertEquals(0, apt.get(0).getLatestUndoPoint().indexNumber);
 
-        assertEquals(0, ptc.get(0));
+        assertEquals(0, ptc.get(new IndexTrackerDLLNode(true,0,0)));
 
         st.receiveControlAction(new Undo(0));
 
@@ -67,7 +67,7 @@ public class StateTrackerTest {
         assertNotNull(apt.get(0));
         assertEquals(3, apt.get(0).getLatestUndoPoint().indexNumber);
 
-        assertEquals(1, ptc.get(3)); //the layer we were just on
+        assertEquals(1, ptc.get(new IndexTrackerDLLNode(true,3,3))); //the layer we were just on
 
 
         st.receivePaintAction(new BeginStroke(1,1,1,0,0,0,255, 0));
@@ -80,7 +80,7 @@ public class StateTrackerTest {
         st.receivePaintAction(new Draw(1,1,5,5,1,0,0,0,255, 0));
         st.receivePaintAction(new EndStroke(5,5,1,0));
         st.receiveControlAction(new Undo(0));
-        for(int i=0; i<st.getLCC();i++){
+        for(int i=0; i<st.getLCC().indexNumber;i++){
             if(tl.get(i) instanceof Undoable undoable)
                 assertNotEquals(Undoable.UndoStatus.UNDONE, undoable.getUndoStatus());
         }
@@ -94,7 +94,7 @@ public class StateTrackerTest {
         StateTracker st = new StateTracker(0, c);
         ArrayList<PaintAction> tl = st.getTimeline();
         HashMap<Integer, ActionPointTracker<IndexTrackerDLLNode>> apt = st.getActionPointTracker();
-        HashMap<Integer, Integer> ptc = st.getPointToCanvasLayer();
+        HashMap<IndexTrackerDLLNode, Integer> ptc = st.getPointToCanvasLayer();
 
         //user id 0 draws something
         st.receivePaintAction(new BeginStroke(1,1,1,0,0,0,255, 0));
@@ -146,7 +146,7 @@ public class StateTrackerTest {
         StateTracker st = new StateTracker(0, c);
         ArrayList<PaintAction> tl = st.getTimeline();
         HashMap<Integer, ActionPointTracker<IndexTrackerDLLNode>> apt = st.getActionPointTracker();
-        HashMap<Integer, Integer> ptc = st.getPointToCanvasLayer();
+        HashMap<IndexTrackerDLLNode, Integer> ptc = st.getPointToCanvasLayer();
 
         //no update
         BoundingBox aabb = st.affectedAreaBoundingBox(true);
@@ -161,13 +161,13 @@ public class StateTrackerTest {
         st.receivePaintAction(new Draw(1,1,5,5,1,0,0,0,255, 0));
         st.receivePaintAction(new EndStroke(5,5,1,0));
 
-        assertEquals(0, st.lastSyncIndex);
+        assertEquals(0, st.lastSyncIndex.indexNumber);
         aabb = st.affectedAreaBoundingBox(true);
         assertEquals(1,aabb.minX);
         assertEquals(1,aabb.minY);
         assertEquals(5,aabb.maxX);
         assertEquals(5,aabb.maxY);
-        assertEquals(2, st.lastSyncIndex);
+        assertEquals(2, st.lastSyncIndex.indexNumber);
 
         //no difference
         aabb = st.affectedAreaBoundingBox(true);
@@ -175,7 +175,64 @@ public class StateTrackerTest {
         assertEquals(0,aabb.minY);
         assertEquals(0,aabb.maxX);
         assertEquals(0,aabb.maxY);
-        assertEquals(2, st.lastSyncIndex);
+        assertEquals(2, st.lastSyncIndex.indexNumber);
+
+
+    }
+
+    @Test
+    public void garbageCollectionTests() throws Exception {
+
+        COWTileCanvas c = new COWTileCanvas(0,10,10);
+        StateTracker st = new StateTracker(0, c);
+        ArrayList<PaintAction> tl = st.getTimeline();
+        HashMap<Integer, ActionPointTracker<IndexTrackerDLLNode>> apt = st.getActionPointTracker();
+        HashMap<IndexTrackerDLLNode, Integer> ptc = st.getPointToCanvasLayer();
+
+        //user 0 draws 5 times
+        st.receivePaintAction(new BeginStroke(1,1,1,0,0,0,255, 0));
+        st.receivePaintAction(new Draw(1,1,2,2,1,0,0,0,255, 0));
+        st.receivePaintAction(new EndStroke(2,2,1,0));
+
+        st.receivePaintAction(new BeginStroke(2,2,1,0,0,0,255, 0));
+        st.receivePaintAction(new Draw(2,2,3,3,1,0,0,0,255, 0));
+        st.receivePaintAction(new EndStroke(3,3,1,0));
+
+        st.receivePaintAction(new BeginStroke(3,3,1,0,0,0,255, 0));
+        st.receivePaintAction(new Draw(3,3,4,4,1,0,0,0,255, 0));
+        st.receivePaintAction(new EndStroke(4,4,1,0));
+
+        st.receivePaintAction(new BeginStroke(4,4,1,0,0,0,255, 0));
+        st.receivePaintAction(new Draw(4,4,5,5,1,0,0,0,255, 0));
+        st.receivePaintAction(new EndStroke(5,5,1,0));
+
+        st.receivePaintAction(new BeginStroke(5,5,1,0,0,0,255, 0));
+        st.receivePaintAction(new Draw(5,5,6,6,1,0,0,0,255, 0));
+        st.receivePaintAction(new EndStroke(6,6,1,0));
+
+        //user 0 undos 3 times
+        st.receiveControlAction(new Undo(0));
+        st.receiveControlAction(new Undo(0));
+        st.receiveControlAction(new Undo(0));
+
+        //user 0 draws something new, and overwrites the old stuff
+        st.receivePaintAction(new BeginStroke(3,3,1,0,0,0,255, 0));
+        st.receivePaintAction(new Draw(3,3,4,4,1,0,0,0,255, 0));
+        st.receivePaintAction(new EndStroke(4,4,1,0));
+
+        assertEquals(Color.black, c.getColor(3,3));
+        assertEquals(Color.black, c.getColor(4,4));
+        assertEquals(Color.white, c.getColor(5,5));
+        assertEquals(Color.white, c.getColor(6,6));
+
+        st.cleanTimeline();
+
+        //nothing should have changed
+        assertEquals(Color.black, c.getColor(3,3));
+        assertEquals(Color.black, c.getColor(4,4));
+        assertEquals(Color.white, c.getColor(5,5));
+        assertEquals(Color.white, c.getColor(6,6));
+
 
 
     }
