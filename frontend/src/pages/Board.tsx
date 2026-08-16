@@ -219,6 +219,10 @@ function Board(){
         [transferTopToBackground]
     );
 
+    //thanks gemini
+    const getRandomHexColor = (): string =>
+        `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
+
     //problem
     const connectWebSocket = useCallback(() => {
         setStatus("connecting");
@@ -228,7 +232,8 @@ function Board(){
             reconnectDelay: 5000,
             //debug: (str) => console.log("[stomp]", str),
             onConnect: () => {
-                console.log("idk");
+                // @ts-ignore
+                colorRef.current.value = getRandomHexColor();
                 setStatus("connected");
                 //its gotta be here
                 client.subscribe("/update/whattoupdate", messageCallback);
@@ -364,8 +369,8 @@ function Board(){
                 <button onClick={connectWebSocket}>connect|</button>
                 <button onClick={sendUndo}>undo|</button>
                 <button onClick={sendRedo}>redo|</button>
-                <button onClick={breakpoint}>breakpoint|</button>
-                <button onClick={cleanUp}>clean</button>
+                {/*<button onClick={breakpoint}>breakpoint|</button>*/}
+                {/*<button onClick={cleanUp}>clean</button>*/}
                 <input ref={colorRef} type="color" id="strokeColor" name="strokeColor"></input>
                 <div className="relative ml-10" style={{ width: `${width}px`, height: `${height}px` }}>
                     <canvas

@@ -62,4 +62,11 @@ public class Syncer {
         smt.send("/update/whattoupdate", message);
     }
 
+    @Scheduled(fixedRate= 10000)
+    public void collectGarbage(){
+
+        PaintServer.stateTracker.cleanTimeline();
+
+    }
+
 }

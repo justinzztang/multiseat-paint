@@ -146,7 +146,7 @@ public class StateTracker {
             //if(controlAction instanceof Undo || Redo){
             lastSyncIndex = lcc;
             //}
-            System.out.println(lcc.indexNumber);
+            //System.out.println(lcc.indexNumber);
 
             //if(controlAction instanceof Redo){debugBreakpoint();}
             stateLock.readLock().lock();
@@ -247,8 +247,12 @@ public class StateTracker {
     //thats less than 1 million elements in timeline, linear time should work perfectly fine
     //runs periodically, but not frequently
     public void cleanTimeline(){
+
+        if(timeline.isEmpty()) return;
+
         //no one else can write
         stateLock.writeLock().lock();
+        stateLock.readLock().lock();
 
         try{
             ArrayList<PaintAction> filteredTimeline = new ArrayList<>();
@@ -267,9 +271,15 @@ public class StateTracker {
             else{ earliestUndoLimit = Collections.min(indList); }
 
             int curIndex = 0;
-            assert(indexTrackerEnd.indexNumber <= timeline.size());
+            assert(indexTrackerEnd.indexNumber < timeline.size());
             for(IndexTrackerDLLNode node : indexTrackerDLL){
+                if(node.indexNumber != curIndex){
+                    continue;
+                }
                 boolean add = true;
+                if(curIndex >= timeline.size()){
+                    continue;
+                }
                 if(curIndex < earliestUndoLimit){ //do not add
                     add = false;
                     //splice out the node
@@ -301,6 +311,7 @@ public class StateTracker {
                 }
                 curIndex++;
             }
+            indexTrackerDLL=indexTrackerHead;
 
             curIndex = 0;
             for(IndexTrackerDLLNode node : indexTrackerHead){
@@ -330,6 +341,7 @@ public class StateTracker {
         }
         finally{
             stateLock.writeLock().unlock();
+            stateLock.readLock().unlock();
         }
 
     }
