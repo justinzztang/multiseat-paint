@@ -30,6 +30,7 @@ import web.helpers.DTO.UserActionDTO;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 @Controller
 public class STOMPController {
@@ -69,8 +70,8 @@ public class STOMPController {
     public void initialSync(SessionSubscribeEvent subEvent){
 
         System.out.println("someone subscribed");
-        System.out.println(subEvent.toString());
-        System.out.println(subEvent.getMessage());
+        /*System.out.println(subEvent.toString());*/
+        //System.out.println(subEvent.getMessage());
 
         StompHeaderAccessor headers = StompHeaderAccessor.wrap(subEvent.getMessage());
         StompCommand command = headers.getCommand();
@@ -91,12 +92,22 @@ public class STOMPController {
 
         Message<byte[]> message = MessageBuilder.createMessage(imageByteStream, accessor.getMessageHeaders());
 
-        smt.convertAndSendToUser(headers.getSessionId(),"/update/whattoupdate", imageByteStream,accessor.getMessageHeaders());
+        smt.convertAndSendToUser(Objects.requireNonNull(headers.getSessionId()),"/update/whattoupdate", imageByteStream,accessor.getMessageHeaders());
 
         SimpMessageHeaderAccessor syncr = SimpMessageHeaderAccessor.create();
         syncr.setSessionId(headers.getSessionId());
         syncr.setLeaveMutable(true);
-        smt.convertAndSendToUser(headers.getSessionId(),"/update/whattoupdate", new ServerMessageDTO("IDAssignment",PaintServer.stateTracker.uniqueUsers), syncr.getMessageHeaders());
+
+        int userID=PaintServer.stateTracker.uniqueUsers;
+
+        if(headers.containsNativeHeader("sentUserID")){
+            if(!headers.getNativeHeader("sentUserID").getFirst().equals("-1")){
+                userID = Integer.parseInt(headers.getNativeHeader("sentUserID").getFirst());
+                PaintServer.stateTracker.uniqueUsers--; //TODO idk about this one
+            }
+        }
+
+        smt.convertAndSendToUser(headers.getSessionId(),"/update/whattoupdate", new ServerMessageDTO("IDAssignment",userID), syncr.getMessageHeaders());
         PaintServer.stateTracker.uniqueUsers++;
 
     }

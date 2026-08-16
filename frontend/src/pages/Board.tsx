@@ -42,16 +42,19 @@ function Board(){
     const snapToGrid = (v:number) => Math.round(v*GRID_SIZE)/GRID_SIZE;
 
     useEffect(() => {
+        // @ts-ignore
+        colorRef.current.value = getRandomHexColor();
+
         if(!canvasRef.current || !backgroundCanvasRef.current){
             console.log("ERROR: canvas element not detected");
             return;
         }
-        canvasRef.current.width = Math.round(width*dpr);
-        canvasRef.current.height = Math.round(height*dpr);
+        canvasRef.current.width = Math.round(width*dpr*5);
+        canvasRef.current.height = Math.round(height*dpr*5);
         //canvasRef.current.style.width = width+'px';
         //canvasRef.current.style.height = height+'px';
-        backgroundCanvasRef.current.width = Math.round(width*dpr);
-        backgroundCanvasRef.current.height = Math.round(height*dpr);
+        backgroundCanvasRef.current.width = Math.round(width*dpr*5);
+        backgroundCanvasRef.current.height = Math.round(height*dpr*5);
         //backgroundCanvasRef.current.style.width = width+'px';
         //backgroundCanvasRef.current.style.height = height+'px';
 
@@ -63,9 +66,9 @@ function Board(){
             console.log("ERROR: canvas context not detected");
             return;
         }
-        ctxRef.current.scale(window.devicePixelRatio, window.devicePixelRatio);
+        ctxRef.current.scale(window.devicePixelRatio*5, window.devicePixelRatio*5);
         ctxRef.current.imageSmoothingEnabled = false;
-        backgroundCtxRef.current.scale(window.devicePixelRatio, window.devicePixelRatio);
+        backgroundCtxRef.current.scale(window.devicePixelRatio*5, window.devicePixelRatio*5);
         backgroundCtxRef.current.imageSmoothingEnabled = false;
 
         if(!colorRef.current){
@@ -129,7 +132,7 @@ function Board(){
     //this one works
     const sendWebSocketMessage = useCallback(
         (msg:WebSocketMessage) => {
-            console.log(msg);
+            //console.log(msg);
             const client = stompRef.current;
             if (client?.connected){
                 client.publish({
@@ -167,7 +170,7 @@ function Board(){
             const bytes:Uint8Array = msg.binaryBody;
             const tiles = (bytes[0] << 8) + (bytes[1]);
 
-            console.log(bytes);
+            //console.log(bytes);
 
             if(syncCanvasRef.current.width !== width || syncCanvasRef.current.height !== height){
                 syncCanvasRef.current.width = width;
@@ -190,7 +193,7 @@ function Board(){
                 const data = imageData.data;
                 //the next width*height*4 bytes are colordata
                 data.set(bytes.subarray(index, index + width*height*4));
-                console.log(startingX, startingY);
+                //console.log(startingX, startingY);
                 // @ts-ignore
                 syncCtxRef.current.putImageData(imageData,startingX,startingY);
 
@@ -228,17 +231,21 @@ function Board(){
         setStatus("connecting");
 
         const client = new Client({
-            brokerURL: "ws://localhost:8080/update-websocket",
+            brokerURL: `ws://${window.location.hostname}:8080/update-websocket`,
             reconnectDelay: 5000,
             //debug: (str) => console.log("[stomp]", str),
             onConnect: () => {
-                // @ts-ignore
-                colorRef.current.value = getRandomHexColor();
                 setStatus("connected");
                 //its gotta be here
+
+                // @ts-ignore
+                backgroundCtxRef.current.clearRect(0,0,backgroundCanvasRef.current.width,backgroundCanvasRef.current.height);
+                // @ts-ignore
+                ctxRef.current.clearRect(0,0,backgroundCanvasRef.current.width,backgroundCanvasRef.current.height);
+
                 client.subscribe("/update/whattoupdate", messageCallback);
 
-                client.subscribe("/user/update/whattoupdate", messageCallback);
+                client.subscribe("/user/update/whattoupdate", messageCallback,{"sentUserID":userID.toString()});
 
                 function messageCallback(message: IMessage) {
                     try {
@@ -266,9 +273,10 @@ function Board(){
 
         console.log(status);
 
-    }, [receiveWebSocketMessage, receiveSyncMessage]);
+    }, [receiveWebSocketMessage, receiveSyncMessage, userID]);
 
     const disconnect = useCallback(() => {
+        console.log("disconnected")
         stompRef.current?.deactivate();
         stompRef.current = null;
     }, []);
@@ -280,8 +288,8 @@ function Board(){
             const { x, y } = getPoint(e);
             const ctx = ctxRef.current;
             if (!ctx) return;
-            console.log("beginStroke");
-            console.log(x);
+            //console.log("beginStroke");
+            //console.log(x);
 
             const cellX = Math.floor(x / GRID_SIZE) * GRID_SIZE;
             const cellY = Math.floor(y / GRID_SIZE) * GRID_SIZE;
@@ -291,7 +299,7 @@ function Board(){
             let penColor = hexToColor(colorRef.current.value);
             if (!penColor) penColor = {r:0,g:0,b:0,a:255};
             drawCell(cellX, cellY, ctxRef.current, penColor);
-            console.log(cellX);
+            //console.log(cellX);
 
             lastPointRef.current = {x,y};
             penDownRef.current = true;
@@ -351,7 +359,7 @@ function Board(){
         },[ sendWebSocketMessage, userID]
     );
 
-    const breakpoint = useCallback(
+    /*const breakpoint = useCallback(
         () => {
             sendWebSocketMessage({type: "breakpoint", userID: userID});
         },[ sendWebSocketMessage, userID]
@@ -361,12 +369,13 @@ function Board(){
         () => {
             sendWebSocketMessage({type: "cleanUp", userID: userID});
         },[ sendWebSocketMessage, userID]
-    );
+    );*/
 
     return(
         <>
             <div className="bg-gray-200 h-max">
                 <button onClick={connectWebSocket}>connect|</button>
+                <button onClick={disconnect}>disconnect|</button>
                 <button onClick={sendUndo}>undo|</button>
                 <button onClick={sendRedo}>redo|</button>
                 {/*<button onClick={breakpoint}>breakpoint|</button>*/}

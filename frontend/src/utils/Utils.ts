@@ -9,6 +9,7 @@ export type WebSocketMessage =
     | {type: "IDAssignment"; userID:number}
     | {type: "breakpoint"; userID:number}
     | {type: "cleanUp"; userID:number}
+    | {type: "ConnectionNotice"; userID:number}
 
 
 
