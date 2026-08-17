@@ -88,7 +88,10 @@ public class COWTileCanvas implements LayeredCanvas<TiledCanvas>{
 
     @Override
     public Canvas copy() {
-        return null;
+        COWTileCanvas copy = new COWTileCanvas(id, width, height);
+        copy.tileLayers.addAll(tileLayers);
+        copy.deleteLayer(0); //get rid of the initial one
+        return copy;
     }
 
     @Override

@@ -33,19 +33,18 @@ public class Undo implements ControlAction{
             //mark everything done by this ID as "undone"
             for(int i=jumpIndex; i<=redoIndex; i++){
                 if(timeline.get(i).getUserID() == userID){
-                    //should be safe, undoable actions come in groups uninterrupted theoretically
+                    //should be safe, undoable actions come in groups uninterrupted
                     ((Undoable)timeline.get(i)).setUndoStatus(Undoable.UndoStatus.UNDONE);
                 }
             }
 
             //resimulate the canvas
-            //canvas.setLayer(LAST COMMON CANVAS)
             canvas.setTopLayer(canvas.getLayer(pointToCanvasLayer.get(lcc)).copy()); //TODO bug: this should be LCC
             for(int i=lcc.indexNumber; i<timeline.size();i++){
                 timeline.get(i).apply(canvas);
             }
 
-            return true; //successfully undid
+            return true;
 
         } catch(Exception e){
             //theres no more undos, somehow, so do nothing

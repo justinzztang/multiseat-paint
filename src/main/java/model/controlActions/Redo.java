@@ -31,12 +31,11 @@ public class Redo implements ControlAction{
             //mark everything done by this ID as "done"
             for(int i=undoIndex; i<=jumpIndex; i++){
                 if(timeline.get(i).getUserID() == userID){
-                    //should be safe, undoable actions come in groups uninterrupted theoretically
+                    //should be safe, undoable actions come in groups uninterrupted
                     ((Undoable)timeline.get(i)).setUndoStatus(Undoable.UndoStatus.DONE);
                 }
             }
 
-            //update canvas
             canvas.setTopLayer(canvas.getLayer(pointToCanvasLayer.get(lcc)).copy()); //TODO bug: this should be LCC
             for(int i=lcc.indexNumber; i<timeline.size();i++){
                 timeline.get(i).apply(canvas);
@@ -44,7 +43,7 @@ public class Redo implements ControlAction{
 
 
 
-            return true; //successful
+            return true;
         } catch(Exception e){
             //theres no more redos, so do nothing
             return false;

@@ -2,16 +2,12 @@ package model;
 
 import model.constants.CanvasConstants;
 import model.controlActions.ControlAction;
-import model.controlActions.Redo;
-import model.controlActions.Undo;
 import model.helpers.ActionPointTracker;
 import model.helpers.BoundingBox;
 import model.helpers.IndexTrackerDLLNode;
 import model.paintActions.*;
-import web.PaintServer;
 
 import java.awt.*;
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -30,6 +26,8 @@ public class StateTracker {
     //state
 
     private int nodeCounter = 0;
+
+    /** Doubly Linked List of index objects, each representing an integer index shared across multiple trackers */
     public IndexTrackerDLLNode indexTrackerDLL = new IndexTrackerDLLNode(false,0, 0);
     public IndexTrackerDLLNode indexTrackerHead = indexTrackerDLL; //should always be index 0
     public IndexTrackerDLLNode indexTrackerEnd = indexTrackerDLL; //should always be index timeline.size()-1
@@ -37,13 +35,19 @@ public class StateTracker {
     /** Stores the pixels of all "uncommitted" operations, such as selection or text, so they can sync with other users */
     private Canvas bufferLayers;
 
+    /** The canvas that stores the current state of the drawing, alongside "snapshots" of previous states for undo/redo usage */
     private LayeredCanvas<TiledCanvas> canvas;
+
     //index -> layer number
     private LinkedHashMap<IndexTrackerDLLNode,Integer> pointToCanvasLayer = new LinkedHashMap<>();
+
+    /** Index of the "last common canvas," before any undone operations */
     private IndexTrackerDLLNode lcc = indexTrackerHead;
+
     /** ArrayList containing user actions in sequence */
     private ArrayList<PaintAction> timeline = new ArrayList<>();
 
+    /** Index in timeline where the last synchronization ended at */
     public IndexTrackerDLLNode lastSyncIndex = indexTrackerEnd;
 
     /** Stores each player's undo data */
@@ -51,7 +55,7 @@ public class StateTracker {
 
     public ReentrantReadWriteLock stateLock = new ReentrantReadWriteLock(true);
 
-
+    /** Update the last sync index of this StateTracker */
     public void updateLSI(){
         stateLock.writeLock().lock();
         try{
@@ -67,6 +71,7 @@ public class StateTracker {
     }
 
     //TODO replace with tiles
+    @Deprecated
     public BoundingBox affectedAreaBoundingBox(boolean shouldUpdate){
         if(timeline.isEmpty() || lastSyncIndex.indexNumber == timeline.size()-1){
             return new BoundingBox(0,0,0,0);
@@ -81,6 +86,7 @@ public class StateTracker {
         return aabb;
     }
 
+    /** @return an array of CanvasTiles that were modified since the last synchronization */
     public CanvasTile[] affectedAreaTiles(boolean shouldUpdate){
         if(timeline.isEmpty() || lastSyncIndex.indexNumber == timeline.size()-1){
             return new CanvasTile[]{}; //empty
@@ -134,8 +140,9 @@ public class StateTracker {
         return Collections.min(indList);
     }
 
-    //receive action that isnt something you apply to the canvas, like undos
-    //synchronized because every request must be processed in order
+    /** Handle user actions that do not directly affect the canvas, such as undo operations
+     * Must process each request in order
+     */
     public synchronized void receiveControlAction(ControlAction controlAction){
 
         stateLock.writeLock().lock();
@@ -147,14 +154,8 @@ public class StateTracker {
             ActionPointTracker<IndexTrackerDLLNode> apt = actionPointTracker.get(controlAction.getUserID());
 
             this.lcc = getLCC();
-            //if you undo, we want to set lsi to this
-            //if you redo, we want to not set lsi to this
-            //if(controlAction instanceof Undo || Redo){
             lastSyncIndex = lcc;
-            //}
-            //System.out.println(lcc.indexNumber);
 
-            //if(controlAction instanceof Redo){debugBreakpoint();}
             stateLock.readLock().lock();
             try {
                 controlAction.runAction(canvas, pointToCanvasLayer, timeline, apt, lcc);
@@ -166,15 +167,11 @@ public class StateTracker {
         finally{
             stateLock.writeLock().unlock();
         }
-
-        //System.out.println(canvas.printCanvas());
-
-
     }
 
-    //receive a concrete action that affects the canvas
-    //synchronized because every request must be processed in order
-    //private int actiontracker = 0;
+    /** Handle user actions that directly affect the canvas, such as brushstrokes
+     * Must process each request in order
+     */
     public synchronized void receivePaintAction(PaintAction paintAction){
 
         stateLock.writeLock().lock();
@@ -185,7 +182,7 @@ public class StateTracker {
             }
 
             //store it in the timeline
-            //but only if its undoable...?
+            //TODO but only if its undoable...?
             timeline.add(paintAction);
             int timelineIndex = timeline.size() - 1;
 
@@ -227,17 +224,9 @@ public class StateTracker {
                 } else if (undoable.getPointType().equals(Undoable.PointType.REDOPOINT)) {
                     temp.isIndex = true;
                     apt.addRedo(temp);
-                    //need to save a canvas snapshot, but AFTER application
-                    //paintAction.apply(canvas);
-                    //pointToCanvasLayer.put(timelineIndex, canvas.getNumLayers()-1); //mark the current canvas layer as REDOPOINT_timelineindex
-                    //canvas.copyTopLayer(); //creates a new layer on which everything after will be applied, preserving the previous (before this copy) layer
-                    //return; //TODO this might need to change in the future
                 }
 
             }
-            //apply the action
-            //System.out.println("applied action #" + actiontracker);
-            //actiontracker++;
             paintAction.apply(canvas);
             indexTrackerEnd = temp;
             nodeCounter++;
@@ -245,21 +234,14 @@ public class StateTracker {
         finally {
             stateLock.writeLock().unlock();
         }
-        //System.out.println(canvas.printCanvas());
-
     }
 
-    //clean up timeline, getting rid of unreachable canvases (past the undo limit), removing overwritten commands, and changing the tracker stuff
-    //locks the state and prevents writing (but not reading)
-    //filtering the timeline and updating numbers is linear in the number of elements in the timeline
-    //very "conservatively": a single stroke is about 200 commands, there will be 16 users, and an average of 300 strokes stored for each one (cause some people havent drawn in a long time
-    //thats less than 1 million elements in timeline, linear time should work perfectly fine
-    //runs periodically, but not frequently
+    /** Clean up the timeline, deleting inaccessible actions such as overwritten actions and those before any undo limits
+     * Also deletes unreachable layers of the canvas
+     */
     public void cleanTimeline(){
 
         if(timeline.isEmpty()) return;
-
-        //no one else can write
         stateLock.writeLock().lock();
         stateLock.readLock().lock();
 
@@ -282,13 +264,7 @@ public class StateTracker {
             int curIndex = 0;
             assert(indexTrackerEnd.indexNumber < timeline.size());
             for(IndexTrackerDLLNode node : indexTrackerDLL){
-                if(node.indexNumber != curIndex){
-                    continue;
-                }
                 boolean add = true;
-                if(curIndex >= timeline.size()){
-                    continue;
-                }
                 if(curIndex < earliestUndoLimit){ //do not add
                     add = false;
                     //splice out the node
@@ -299,12 +275,10 @@ public class StateTracker {
                     if(node.next==null){
                         indexTrackerEnd = node.prev;
                     }
-                    //if both happen, then we have an empty list, and both head and end are null
                 }
                 else if(timeline.get(curIndex) instanceof Undoable undoable){
-                    if(undoable.getUndoStatus() == Undoable.UndoStatus.OVERWRITTEN){//do not add
+                    if(undoable.getUndoStatus() == Undoable.UndoStatus.OVERWRITTEN){ //see above
                         add = false;
-                        //splice out the node
                         node.spliceOut();
                         if(node.prev==null){
                             indexTrackerHead = node.next;
@@ -312,7 +286,6 @@ public class StateTracker {
                         if(node.next==null){
                             indexTrackerEnd = node.prev;
                         }
-                        //if both happen, then we have an empty list, and both head and end are null
                     }
                 }
                 if(add){
@@ -329,8 +302,6 @@ public class StateTracker {
             }
             //timeline is filtered, indices are updated
             timeline = filteredTimeline;
-
-            //now flatten canvas, update PTCL (which is in order, as in smaller points have smaller indices),
 
             //find the first layer that doesnt need to be cleaned
             int firstSafeLayer=-1;
@@ -352,6 +323,8 @@ public class StateTracker {
 
     }
 
+
+    //debug and testing methods
     public void debugBreakpoint(){
         return;
     }

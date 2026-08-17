@@ -73,13 +73,10 @@ public class STOMPController {
     public void initialSync(SessionSubscribeEvent subEvent){
 
         System.out.println("someone subscribed");
-        /*System.out.println(subEvent.toString());*/
-        //System.out.println(subEvent.getMessage());
 
         StompHeaderAccessor headers = StompHeaderAccessor.wrap(subEvent.getMessage());
         StompCommand command = headers.getCommand();
         if(command == null || headers.getDestination() == null || !headers.getDestination().startsWith("/user") || !command.equals(StompCommand.SUBSCRIBE)) return;
-
 
         List<CanvasTile> tileSet = new ArrayList<>();
 
@@ -96,8 +93,6 @@ public class STOMPController {
         accessor.setLeaveMutable(true);
         accessor.setSessionId(headers.getSessionId());
         accessor.setSubscriptionId(headers.getSubscriptionId());
-
-        Message<byte[]> message = MessageBuilder.createMessage(imageByteStream, accessor.getMessageHeaders());
 
         smt.convertAndSendToUser(Objects.requireNonNull(headers.getSessionId()),"/update/whattoupdate", imageByteStream,accessor.getMessageHeaders());
 
