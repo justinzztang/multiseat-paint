@@ -1,10 +1,7 @@
 package model.paintActions;
 
 import model.Canvas;
-import model.constants.CanvasConstants;
 import model.helpers.BoundingBox;
-
-import java.awt.*;
 
 /**
  * Action that indicates a user has begun a stroke, by clicking down with the paint tool
@@ -42,7 +39,7 @@ public class BeginStroke implements PaintAction, Undoable {
     public void apply(Canvas canvas) {
         if(status != UndoStatus.DONE) return;
         if( x < 0 || x > canvas.getWidth() || y < 0 || y > canvas.getWidth()) return;
-        canvas.setPixel(x,y,r,g,b,a);
+        canvas.drawPixel(x,y,r,g,b,a);
         //System.out.println("applied BeginStroke");
     }
 

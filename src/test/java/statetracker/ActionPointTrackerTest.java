@@ -1,11 +1,6 @@
 package statetracker;
 
-import model.MemorySmartCanvas;
-import model.StateTracker;
 import model.helpers.ActionPointTracker;
-import model.paintActions.BeginStroke;
-import model.paintActions.Draw;
-import model.paintActions.EndStroke;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

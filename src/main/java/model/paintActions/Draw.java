@@ -49,7 +49,7 @@ public class Draw implements PaintAction, Undoable {
         Point[] markedPoints = DrawUtil.bresenhamLine(prevX, prevY, x, y);
         for(Point p : markedPoints){
             if( p.x < 0 || p.x > canvas.getWidth() || p.y < 0 || p.y > canvas.getWidth()) continue;
-            canvas.setPixel(p.x,p.y,r,g,b,a);
+            canvas.drawPixel(p.x,p.y,r,g,b,a);
         }
     }
 

@@ -1,6 +1,7 @@
 package web;
 
 import model.CanvasTile;
+import model.constants.CanvasConstants;
 import model.controlActions.ControlAction;
 import model.controlActions.Redo;
 import model.controlActions.Undo;
@@ -81,9 +82,13 @@ public class STOMPController {
 
 
         List<CanvasTile> tileSet = new ArrayList<>();
-        for(CanvasTile[] row : PaintServer.canvas.getTileLayers().getLast().second()){
-            tileSet.addAll(Arrays.asList(row));
+
+        for(int ty=0; ty<PaintServer.canvas.getHeight(); ty+= CanvasConstants.TILE_SIDE){
+            for(int tx=0; tx<PaintServer.canvas.getWidth(); tx+=CanvasConstants.TILE_SIDE){
+                tileSet.add(PaintServer.canvas.getTop().getTile(tx/CanvasConstants.TILE_SIDE,ty/CanvasConstants.TILE_SIDE));
+            }
         }
+
         byte[] imageByteStream = CanvasUtil.tileSetToBytestream(tileSet.toArray(new CanvasTile[0]));
 
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.MESSAGE);

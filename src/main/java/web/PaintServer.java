@@ -1,7 +1,6 @@
 package web;
 
 import model.COWTileCanvas;
-import model.MemorySmartCanvas;
 import model.StateTracker;
 
 import org.springframework.boot.SpringApplication;

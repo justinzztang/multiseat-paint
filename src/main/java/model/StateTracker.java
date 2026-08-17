@@ -16,25 +16,28 @@ import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * Tracks and handles actions and canvas states, allowing undoing/redoing functionality
- * The core of the program
+ * Receives user actions and updates the canvas accordingly, keeping track of undoable actions to allow for undo/redo functionality.
  */
 public class StateTracker {
 
-    private int id;
+    //metadata
+    /** Unique ID */
+    public int id;
+
+    /** The number of unique users that have sent an action to this stateTracker */
     public int uniqueUsers = 0;
 
-    int nodeCounter = 0;
+    //state
 
-    //this stuff needs to be locked when copying
+    private int nodeCounter = 0;
     public IndexTrackerDLLNode indexTrackerDLL = new IndexTrackerDLLNode(false,0, 0);
-    public IndexTrackerDLLNode indexTrackerHead = indexTrackerDLL; //should always be 0 no?
-    public IndexTrackerDLLNode indexTrackerEnd = indexTrackerDLL; //should always be timeline.size()-1 no?
+    public IndexTrackerDLLNode indexTrackerHead = indexTrackerDLL; //should always be index 0
+    public IndexTrackerDLLNode indexTrackerEnd = indexTrackerDLL; //should always be index timeline.size()-1
 
     /** Stores the pixels of all "uncommitted" operations, such as selection or text, so they can sync with other users */
     private Canvas bufferLayers;
 
-    private COWTileCanvas canvas;
+    private LayeredCanvas<TiledCanvas> canvas;
     //index -> layer number
     private LinkedHashMap<IndexTrackerDLLNode,Integer> pointToCanvasLayer = new LinkedHashMap<>();
     private IndexTrackerDLLNode lcc = indexTrackerHead;
@@ -93,7 +96,7 @@ public class StateTracker {
 
             for(int y = minYTile;y<=maxYTile;y++){
                 for(int x = minXTile;x<=maxXTile;x++){
-                    affectedTiles.add(canvas.getTileLayers().getLast().second()[y][x]);
+                    affectedTiles.add(canvas.getTop().getTile(x,y));
                 }
             }
 
@@ -216,6 +219,8 @@ public class StateTracker {
                     apt.addUndo(temp);
                     //need to save a canvas snapshot
                     pointToCanvasLayer.put(temp, canvas.getNumLayers() - 1); //mark the current canvas layer as UNDOPOINT_timelineindex
+
+
                     canvas.copyTopLayer(); //creates a new layer on which everything will be applied, preserving the previous (before this copy) layer
 
 
@@ -337,10 +342,7 @@ public class StateTracker {
             }
 
             //delete the first few layers of the canvas
-            if(firstSafeLayer >=0 ) canvas.getTileLayers().subList(0,firstSafeLayer);
-
-
-
+            if(firstSafeLayer > 0 ) canvas.deleteLayers(0,firstSafeLayer);
 
         }
         finally{

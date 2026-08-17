@@ -4,10 +4,16 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Iterator;
 
+/**
+ * Node in a DLL that represents integer indices in {@link model.StateTracker}. Since DLLs allow O(1) splicing of nodes,
+ * several indices can be updated all at once, if they are represented by this object.
+ */
 public class IndexTrackerDLLNode implements Iterable<IndexTrackerDLLNode>, Comparable<IndexTrackerDLLNode>{
+
     public boolean deleted = false;
     public boolean isIndex;
     public int indexNumber;
+    /** Unique ID used to determine the hashCode() value*/
     public int id;
 
     public IndexTrackerDLLNode prev;
@@ -18,7 +24,8 @@ public class IndexTrackerDLLNode implements Iterable<IndexTrackerDLLNode>, Compa
         this.isIndex = isIndex;
         this.indexNumber = indexNumber;
         this.id = id;
-        prev = null; //TODO definitely not good code
+        //TODO replace with optionals one day
+        prev = null;
         next = null;
     }
 
@@ -31,6 +38,9 @@ public class IndexTrackerDLLNode implements Iterable<IndexTrackerDLLNode>, Compa
         next = null;
     }
 
+    /**
+     * Splice out this node, and join the previous and next nodes, if they exist
+     */
     public void spliceOut(){
         if(next == null){
             if(prev == null){

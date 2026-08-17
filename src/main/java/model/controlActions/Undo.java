@@ -1,8 +1,7 @@
 package model.controlActions;
 
-import model.COWTileCanvas;
+import model.*;
 import model.Canvas;
-import model.MemorySmartCanvas;
 import model.helpers.ActionPointTracker;
 import model.helpers.IndexTrackerDLLNode;
 import model.paintActions.PaintAction;
@@ -25,7 +24,7 @@ public class Undo implements ControlAction{
     }
 
     @Override
-    public boolean runAction(COWTileCanvas canvas, HashMap<IndexTrackerDLLNode,Integer> pointToCanvasLayer,
+    public boolean runAction(LayeredCanvas<TiledCanvas> canvas, HashMap<IndexTrackerDLLNode,Integer> pointToCanvasLayer,
                              ArrayList<PaintAction> timeline, ActionPointTracker<IndexTrackerDLLNode> apt, IndexTrackerDLLNode lcc) {
         try{
             int jumpIndex = apt.getLatestUndoPoint().indexNumber;
@@ -41,8 +40,7 @@ public class Undo implements ControlAction{
 
             //resimulate the canvas
             //canvas.setLayer(LAST COMMON CANVAS)
-
-            canvas.setLayer(canvas.getLayerCopy(pointToCanvasLayer.get(lcc)));
+            canvas.setTopLayer(canvas.getLayer(pointToCanvasLayer.get(lcc)).copy()); //TODO bug: this should be LCC
             for(int i=lcc.indexNumber; i<timeline.size();i++){
                 timeline.get(i).apply(canvas);
             }
