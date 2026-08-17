@@ -29,6 +29,8 @@ public class Syncer {
     @Scheduled(fixedRate= 100)
     public void syncCanvas(){
 
+        //TODO: send out sync messages regarding the uncommitted canvas
+
         //statetracker or something stores the affected area
         //send to the clients for them to calculate the canvas themselves
 

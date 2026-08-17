@@ -31,6 +31,9 @@ public class StateTracker {
     public IndexTrackerDLLNode indexTrackerHead = indexTrackerDLL; //should always be 0 no?
     public IndexTrackerDLLNode indexTrackerEnd = indexTrackerDLL; //should always be timeline.size()-1 no?
 
+    /** Stores the pixels of all "uncommitted" operations, such as selection or text, so they can sync with other users */
+    private Canvas bufferLayers;
+
     private COWTileCanvas canvas;
     //index -> layer number
     private LinkedHashMap<IndexTrackerDLLNode,Integer> pointToCanvasLayer = new LinkedHashMap<>();
@@ -179,6 +182,7 @@ public class StateTracker {
             }
 
             //store it in the timeline
+            //but only if its undoable...?
             timeline.add(paintAction);
             int timelineIndex = timeline.size() - 1;
 

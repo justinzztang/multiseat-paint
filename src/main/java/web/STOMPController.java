@@ -43,6 +43,8 @@ public class STOMPController {
     @MessageMapping("/handleaction")
     public void handleTheAction(UserActionDTO action) throws Exception {
 
+        //TODO: when a user sends an uncommitted update (moving a selected region around), update the stateTrackers uncommitted canvas instead
+
         PaintAction paintAction = switch (action.type) {
             case "BeginStroke" -> new BeginStroke(action.x, action.y, action.thickness, action.r, action.g, action.b, action.a, action.userID);
             case "Draw" -> new Draw(action.prevX, action.prevY, action.x, action.y, action.thickness, action.r, action.g, action.b, action.a, action.userID);
