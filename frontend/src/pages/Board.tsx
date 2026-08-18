@@ -8,6 +8,9 @@ import {hexToColor} from "../utils/Utils.ts";
 
 import {bresenhamLine} from "../utils/Bresenham.ts";
 
+import {filledCircle, thickCircle} from "../utils/Circles.ts";
+
+
 function Board(){
 
     const GRID_SIZE = 1;
@@ -28,12 +31,22 @@ function Board(){
     // the sync canvas context
     const syncCtxRef = useRef<OffscreenCanvasRenderingContext2D>(syncCanvasRef.current.getContext("2d"));
 
+    // the canvas used for making drawLine fast
+    const lineCanvasRef = useRef<OffscreenCanvas>(new OffscreenCanvas(1,1));
+    // the line canvas context
+    const lineCtxRef = useRef<OffscreenCanvasRenderingContext2D>(lineCanvasRef.current.getContext("2d"));
+
+
     // last point drawn, used for connecting lines smoothly
     const lastPointRef = useRef<Point | null>(null);
     // if the pen is down
     const penDownRef = useRef(false);
 
     const colorRef = useRef<HTMLInputElement | null>(null);
+
+    const [erasing, setErasing] = useState(false);
+
+    const [thickness, setThickness] = useState(1);
 
     const dpr = window.devicePixelRatio || 1;
 
@@ -49,12 +62,12 @@ function Board(){
             console.log("ERROR: canvas element not detected");
             return;
         }
-        canvasRef.current.width = Math.round(width*dpr*5);
-        canvasRef.current.height = Math.round(height*dpr*5);
+        canvasRef.current.width = Math.round(width*dpr);
+        canvasRef.current.height = Math.round(height*dpr);
         //canvasRef.current.style.width = width+'px';
         //canvasRef.current.style.height = height+'px';
-        backgroundCanvasRef.current.width = Math.round(width*dpr*5);
-        backgroundCanvasRef.current.height = Math.round(height*dpr*5);
+        backgroundCanvasRef.current.width = Math.round(width*dpr);
+        backgroundCanvasRef.current.height = Math.round(height*dpr);
         //backgroundCanvasRef.current.style.width = width+'px';
         //backgroundCanvasRef.current.style.height = height+'px';
 
@@ -66,9 +79,9 @@ function Board(){
             console.log("ERROR: canvas context not detected");
             return;
         }
-        ctxRef.current.scale(window.devicePixelRatio*5, window.devicePixelRatio*5);
+        ctxRef.current.scale(window.devicePixelRatio, window.devicePixelRatio);
         ctxRef.current.imageSmoothingEnabled = false;
-        backgroundCtxRef.current.scale(window.devicePixelRatio*5, window.devicePixelRatio*5);
+        backgroundCtxRef.current.scale(window.devicePixelRatio, window.devicePixelRatio);
         backgroundCtxRef.current.imageSmoothingEnabled = false;
 
         if(!colorRef.current){
@@ -103,10 +116,42 @@ function Board(){
             if(!colorRef.current) return;
             let penColor = hexToColor(colorRef.current.value);
             if (!penColor) penColor = {r:0,g:0,b:0,a:255};
-            for (const cell of markedCells) {
-                drawCell(cell.x , cell.y, ctx,penColor);
+
+            if(lineCanvasRef.current.width !== width || lineCanvasRef.current.height !== height){
+                lineCanvasRef.current.width = width;
+                lineCanvasRef.current.height = height;
             }
-        },[drawCell, bresenhamLine]
+
+            const imageData = ctx.createImageData(width, height);
+            const data = imageData.data;
+
+            for (const cell of markedCells) {
+                const markedPoints = thickCircle(cell.x, cell.y, thickness);
+                for(const point of markedPoints){
+                    if(point.x < 0 || point.x >= width || point.y < 0 || point.y >= height) continue;
+                    if(erasing){//TODO handle erasing using transparency or background color
+                        data[point.y*width*4 + point.x*4] = 255;
+                        data[point.y*width*4 + point.x*4+1] = 255;
+                        data[point.y*width*4 + point.x*4+2] = 255;
+                        data[point.y*width*4 + point.x*4+3] = 255;
+                    }
+                    else{
+                        data[point.y*width*4 + point.x*4] = penColor.r;
+                        data[point.y*width*4 + point.x*4+1] = penColor.g;
+                        data[point.y*width*4 + point.x*4+2] = penColor.b;
+                        data[point.y*width*4 + point.x*4+3] = penColor.a;
+                    }
+                }
+            }
+
+            // @ts-ignore
+            lineCtxRef.current.putImageData(
+                imageData, 0, 0
+            );
+            //console.log(imageData);
+            ctx.drawImage(lineCanvasRef.current,0,0, width, height, 0, 0, width, height);
+
+        },[drawCell, bresenhamLine, thickness, erasing]
     );
 
     const transferTopToBackground = useCallback(
@@ -298,16 +343,47 @@ function Board(){
             if(!colorRef.current) return;
             let penColor = hexToColor(colorRef.current.value);
             if (!penColor) penColor = {r:0,g:0,b:0,a:255};
-            drawCell(cellX, cellY, ctxRef.current, penColor);
+
+            const markedPoints = filledCircle(cellX, cellY, thickness);
+            for(const point of markedPoints){
+                if(erasing){
+                    drawCell(point.x, point.y, ctxRef.current, {r:255,g:255,b:255,a:255}); //TODO figure out how to do transparent erase/background color
+                }
+                else{
+                    drawCell(point.x, point.y, ctxRef.current, penColor);
+                }
+            }
+            //drawCell(cellX, cellY, ctxRef.current, penColor);
             //console.log(cellX);
 
             lastPointRef.current = {x,y};
             penDownRef.current = true;
 
             //send message
-            sendWebSocketMessage({type: "BeginStroke", userID: userID, x: cellX, y: cellY, thickness:1,r:penColor.r,g:penColor.g,b:penColor.b,a:penColor.a});
+            if(erasing){
+                sendWebSocketMessage({
+                    type: "BeginErase",
+                    userID: userID,
+                    x: cellX,
+                    y: cellY,
+                    thickness: thickness,
+                });
+            }
+            else {
+                sendWebSocketMessage({
+                    type: "BeginStroke",
+                    userID: userID,
+                    x: cellX,
+                    y: cellY,
+                    thickness: thickness,
+                    r: penColor.r,
+                    g: penColor.g,
+                    b: penColor.b,
+                    a: penColor.a
+                });
+            }
         },
-        [drawCell, getPoint, sendWebSocketMessage, userID]
+        [drawCell, getPoint, sendWebSocketMessage, userID, thickness,erasing]
     );
 
 
@@ -325,13 +401,35 @@ function Board(){
             if (!penColor) penColor = {r:0,g:0,b:0,a:255};
 
             //send message
-            sendWebSocketMessage({type: "Draw", userID: userID,
-                prevX:snapToGrid(last.x), prevY:snapToGrid(last.y),
-                x: snapToGrid(x), y: snapToGrid(y),thickness:1,r:penColor.r,g:penColor.g,b:penColor.b,a:penColor.a});
-
+            if(erasing){
+                sendWebSocketMessage({
+                    type: "Erase",
+                    userID: userID,
+                    prevX: snapToGrid(last.x),
+                    prevY: snapToGrid(last.y),
+                    x: snapToGrid(x),
+                    y: snapToGrid(y),
+                    thickness: thickness,
+                });
+            }
+            else {
+                sendWebSocketMessage({
+                    type: "Draw",
+                    userID: userID,
+                    prevX: snapToGrid(last.x),
+                    prevY: snapToGrid(last.y),
+                    x: snapToGrid(x),
+                    y: snapToGrid(y),
+                    thickness: thickness,
+                    r: penColor.r,
+                    g: penColor.g,
+                    b: penColor.b,
+                    a: penColor.a
+                });
+            }
 
         },
-        [getPoint, drawLine, sendWebSocketMessage, userID]
+        [getPoint, drawLine, sendWebSocketMessage, userID, thickness,erasing]
     );
 
     const pointerUp = useCallback(
@@ -343,9 +441,26 @@ function Board(){
 
             //send message
             const {x,y} = getPoint(e);
-            sendWebSocketMessage({type: "EndStroke", userID: userID, x: Math.floor(x / GRID_SIZE) * GRID_SIZE, y: Math.floor(y / GRID_SIZE) * GRID_SIZE, thickness: 1});
+            if(erasing){
+                sendWebSocketMessage({
+                    type: "EndErase",
+                    userID: userID,
+                    x: Math.floor(x / GRID_SIZE) * GRID_SIZE,
+                    y: Math.floor(y / GRID_SIZE) * GRID_SIZE,
+                    thickness: thickness
+                });
+            }
+            else {
+                sendWebSocketMessage({
+                    type: "EndStroke",
+                    userID: userID,
+                    x: Math.floor(x / GRID_SIZE) * GRID_SIZE,
+                    y: Math.floor(y / GRID_SIZE) * GRID_SIZE,
+                    thickness: thickness
+                });
+            }
         },
-        [getPoint, sendWebSocketMessage, userID]
+        [getPoint, sendWebSocketMessage, userID, thickness,erasing]
     );
 
     const sendUndo = useCallback(
@@ -363,13 +478,13 @@ function Board(){
         () => {
             sendWebSocketMessage({type: "breakpoint", userID: userID});
         },[ sendWebSocketMessage, userID]
-    );
-
-    const cleanUp = useCallback(
-        () => {
-            sendWebSocketMessage({type: "cleanUp", userID: userID});
-        },[ sendWebSocketMessage, userID]
     );*/
+
+    const thicknessSlider = useCallback(
+        (e:React.ChangeEvent<HTMLInputElement>) => {
+            setThickness(e.currentTarget.valueAsNumber);
+        },[thickness]
+    );
 
     return(
         <>
@@ -378,6 +493,8 @@ function Board(){
                 <button onClick={disconnect}>disconnect|</button>
                 <button onClick={sendUndo}>undo|</button>
                 <button onClick={sendRedo}>redo|</button>
+                <input type="range" min={1} max={100} step={1} value={thickness} onChange={thicknessSlider}/>
+                <button onClick={() => setErasing(!erasing)}>|toggle eraser|</button>
                 {/*<button onClick={breakpoint}>breakpoint|</button>*/}
                 {/*<button onClick={cleanUp}>clean</button>*/}
                 <input ref={colorRef} type="color" id="strokeColor" name="strokeColor"></input>

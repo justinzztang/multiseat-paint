@@ -6,6 +6,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -22,6 +23,12 @@ public class STOMPWebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) { //sets the endpoint for where you make the connection
         registry.addEndpoint("/update-websocket").setAllowedOriginPatterns("*");
         registry.setPreserveReceiveOrder(true);
+    }
+
+    @Override
+    public void configureWebSocketTransport(WebSocketTransportRegistration registry){
+        registry.setSendBufferSizeLimit(1024*1024*8);
+        registry.setMessageSizeLimit(1024*1024*8);
     }
 
 }

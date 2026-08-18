@@ -139,6 +139,24 @@ public class DrawUtil {
         return newPoints.toArray(new Point[0]);
     }
 
+    public static Point[] thickCircle(int x, int y, int diameter){
+        Set<Point> newPoints = new HashSet<>();
+        Set<Point> points = diameter%2==1 ? new HashSet<>(Arrays.asList(midpointCircle(x,y,diameter/2))) : new HashSet<>(Arrays.asList(evenDiameterCircle(x,y,diameter/2)));
+        for(Point p : points){
+            int x0 = p.x;
+            if(x0 > x){
+                x0--;
+                newPoints.add(new Point(x0,p.y));
+            }
+            else if(x0 < x){
+                x0++;
+                newPoints.add(new Point(x0,p.y));
+            }
+        }
+        newPoints.addAll(points);
+        return newPoints.toArray(new Point[0]);
+    }
+
     //https://stackoverflow.com/questions/7438263/alpha-compositing-algorithm-blend-modes
     public static Color compositeOver(Color bg, Color fg){
 

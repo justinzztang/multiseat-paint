@@ -6,10 +6,7 @@ import model.controlActions.ControlAction;
 import model.controlActions.Redo;
 import model.controlActions.Undo;
 import model.helpers.CanvasUtil;
-import model.paintActions.BeginStroke;
-import model.paintActions.Draw;
-import model.paintActions.EndStroke;
-import model.paintActions.PaintAction;
+import model.paintActions.*;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
@@ -44,6 +41,9 @@ public class STOMPController {
             case "BeginStroke" -> new BeginStroke(action.x, action.y, action.thickness, action.r, action.g, action.b, action.a, action.userID);
             case "Draw" -> new Draw(action.prevX, action.prevY, action.x, action.y, action.thickness, action.r, action.g, action.b, action.a, action.userID);
             case "EndStroke" -> new EndStroke(action.x, action.y, action.thickness, action.userID);
+            case "BeginErase" -> new BeginErase(action.x, action.y, action.thickness, action.userID);
+            case "Erase" -> new Erase(action.prevX, action.prevY, action.x, action.y, action.thickness, action.userID);
+            case "EndErase" -> new EndErase(action.x, action.y, action.thickness, action.userID);
             default -> null;
         };
         ControlAction controlAction = switch (action.type) {

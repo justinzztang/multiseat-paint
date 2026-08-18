@@ -48,7 +48,7 @@ public class Draw implements PaintAction, Undoable {
         //System.out.println("applied Draw");
         Point[] markedPoints = DrawUtil.bresenhamLine(prevX, prevY, x, y);
         for(Point p : markedPoints){
-            Point[] points = DrawUtil.filledCircle(p.x,p.y,thickness);
+            Point[] points = DrawUtil.thickCircle(p.x,p.y,thickness); //assuming beginStroke called before this
             for(Point pp : points){
                 if( pp.x < 0 || pp.x > canvas.getWidth() || pp.y < 0 || pp.y > canvas.getHeight()) continue;
                 canvas.compositePixel(pp.x,pp.y,r,g,b,a);

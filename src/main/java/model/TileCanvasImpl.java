@@ -27,7 +27,7 @@ public class TileCanvasImpl implements TiledCanvas{
                 Color[][] tileColors = new Color[tileHeight][tileWidth];
                 for(int y=0; y< tileHeight; y++){
                     for(int x=0; x<tileWidth;x++){
-                        tileColors[y][x] = Color.white;
+                        tileColors[y][x] = new Color(0,0,0,0);
                     }
                 }
                 temp[ty/CanvasConstants.TILE_SIDE][tx/CanvasConstants.TILE_SIDE] = new CanvasTile(tx/CanvasConstants.TILE_SIDE, ty/CanvasConstants.TILE_SIDE, tileWidth, tileHeight, tileColors);

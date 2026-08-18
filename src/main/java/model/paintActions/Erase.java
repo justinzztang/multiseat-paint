@@ -19,7 +19,7 @@ public class Erase extends Draw{
         //System.out.println("applied Draw");
         Point[] markedPoints = DrawUtil.bresenhamLine(prevX, prevY, x, y);
         for(Point p : markedPoints){
-            Point[] points = DrawUtil.filledCircle(p.x,p.y,thickness);
+            Point[] points = DrawUtil.thickCircle(p.x,p.y,thickness);
             for(Point pp : points){
                 if( pp.x < 0 || pp.x > canvas.getWidth() || pp.y < 0 || pp.y > canvas.getHeight()) continue;
                 canvas.setPixel(pp.x,pp.y,0,0,0,0);

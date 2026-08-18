@@ -4,6 +4,9 @@ export type WebSocketMessage =
     | {type: "BeginStroke"; userID: number; x: number; y: number; thickness:number; r:number; g:number; b:number; a:number}
     | {type: "Draw"; userID: number; prevX:number; prevY:number; x: number; y: number; thickness:number; r:number; g:number; b:number; a:number}
     | {type: "EndStroke"; userID: number; x: number; y: number; thickness:number;}
+    | {type: "BeginErase"; userID: number; x: number; y: number; thickness:number;}
+    | {type: "Erase"; userID: number; prevX:number; prevY:number; x: number; y: number; thickness:number;}
+    | {type: "EndErase"; userID: number; x: number; y: number; thickness:number;}
     | {type: "Undo"; userID:number}
     | {type: "Redo"; userID:number}
     | {type: "IDAssignment"; userID:number}
