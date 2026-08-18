@@ -1,7 +1,5 @@
 package model;
 
-import java.awt.*;
-
 /**
  * A {@link Canvas} that stores several canvas layers
  * @param <C> the implementation of stored canvas layers

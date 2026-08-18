@@ -1,7 +1,6 @@
 package web;
 
 import model.CanvasTile;
-import model.helpers.BoundingBox;
 import model.helpers.CanvasUtil;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -13,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.MimeTypeUtils;
 
 import java.awt.*;
-import java.util.Arrays;
 
 
 @Service

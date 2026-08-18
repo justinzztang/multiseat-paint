@@ -4,7 +4,6 @@ import model.constants.CanvasConstants;
 
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public class COWTileCanvas implements LayeredCanvas<TiledCanvas>{
 

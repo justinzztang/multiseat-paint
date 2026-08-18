@@ -1,7 +1,6 @@
 package model.controlActions;
 
 import model.*;
-import model.Canvas;
 import model.helpers.ActionPointTracker;
 import model.helpers.IndexTrackerDLLNode;
 import model.paintActions.PaintAction;

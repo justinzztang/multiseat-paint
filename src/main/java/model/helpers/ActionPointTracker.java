@@ -5,8 +5,6 @@ import model.constants.CanvasConstants;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
-import java.util.Stack;
-
 
 //successfully handles undo/redo tracking and overwrites
 public class ActionPointTracker<E> {
