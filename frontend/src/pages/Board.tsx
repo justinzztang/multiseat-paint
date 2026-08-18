@@ -44,9 +44,9 @@ function Board(){
 
     const colorRef = useRef<HTMLInputElement | null>(null);
 
-    const [erasing, setErasing] = useState(false);
+    const erasingRef = useRef(false);
 
-    const [thickness, setThickness] = useState(1);
+    const thicknessRef = useRef(1);
 
     const dpr = window.devicePixelRatio || 1;
 

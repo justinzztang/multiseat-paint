@@ -14,8 +14,6 @@ export type WebSocketMessage =
     | {type: "cleanUp"; userID:number}
     | {type: "ConnectionNotice"; userID:number}
 
-
-
 export type Color = {r:number;g:number;b:number;a:number}
 
 export function hexToColor(hex:string):Color | null{
@@ -37,3 +35,10 @@ export function hexToColor(hex:string):Color | null{
         a: 255
     };
 }
+
+export interface CanvasProperties {
+    GRID_SIZE: number;
+    WIDTH: number;
+    HEIGHT: number;
+}
+
