@@ -31,7 +31,7 @@ public class EndStroke implements PaintAction, Undoable {
     @Override
     public void apply(Canvas canvas) {
         if(status != UndoStatus.DONE) return;
-        if( x < 0 || x > canvas.getWidth() || y < 0 || y > canvas.getWidth()) return;
+        if( x < 0 || x > canvas.getWidth() || y < 0 || y > canvas.getHeight()) return;
         //System.out.println("applied EndStroke");
     }
 
@@ -60,10 +60,14 @@ public class EndStroke implements PaintAction, Undoable {
         return status;
     }
 
+    public boolean canEqual(Object o) {
+        return (o instanceof EndStroke);
+    }
+
     @Override
     public boolean equals(Object o){
         if(o instanceof EndStroke bs){
-            return (x==bs.x
+            return bs.canEqual(this) && (x==bs.x
                     && y==bs.y
                     && thickness==bs.thickness
                     && id==bs.id

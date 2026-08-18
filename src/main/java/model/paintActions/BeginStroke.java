@@ -2,20 +2,23 @@ package model.paintActions;
 
 import model.Canvas;
 import model.helpers.BoundingBox;
+import model.helpers.DrawUtil;
+
+import java.awt.*;
 
 /**
  * Action that indicates a user has begun a stroke, by clicking down with the paint tool
  */
 public class BeginStroke implements PaintAction, Undoable {
-    private int x;
-    private int y;
-    private int thickness;
-    private int r;
-    private int g;
-    private int b;
-    private int a;
-    private int id;
-    private UndoStatus status = UndoStatus.DONE;
+    protected int x;
+    protected int y;
+    protected int thickness;
+    protected int r;
+    protected int g;
+    protected int b;
+    protected int a;
+    protected int id;
+    protected UndoStatus status = UndoStatus.DONE;
 
     public BeginStroke(int x, int y, int t, int r, int g, int b, int a, int id){
         this.x = x;
@@ -38,8 +41,13 @@ public class BeginStroke implements PaintAction, Undoable {
     @Override
     public void apply(Canvas canvas) {
         if(status != UndoStatus.DONE) return;
-        if( x < 0 || x > canvas.getWidth() || y < 0 || y > canvas.getWidth()) return;
-        canvas.drawPixel(x,y,r,g,b,a);
+        if( x < 0 || x > canvas.getWidth() || y < 0 || y > canvas.getHeight()) return;
+
+        Point[] points = DrawUtil.filledCircle(x,y,thickness);
+        for(Point p : points){
+            if( p.x < 0 || p.x > canvas.getWidth() || p.y < 0 || p.y > canvas.getHeight()) continue;
+            canvas.compositePixel(p.x,p.y,r,g,b,a);
+        }
         //System.out.println("applied BeginStroke");
     }
 
@@ -68,10 +76,14 @@ public class BeginStroke implements PaintAction, Undoable {
         return status;
     }
 
+    public boolean canEqual(Object o){
+        return (o instanceof BeginStroke);
+    }
+
     @Override
     public boolean equals(Object o){
         if(o instanceof BeginStroke bs){
-            return (x==bs.x
+            return (bs.canEqual(this)) && (x==bs.x
                     && y==bs.y
                     && thickness==bs.thickness
                     && r==bs.r

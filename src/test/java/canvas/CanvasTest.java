@@ -31,7 +31,7 @@ public class CanvasTest {
         COWTileCanvas c = new COWTileCanvas(1, 15, 15);
         assertEquals(Color.white, c.getColor(0,0)); //sanity check
 
-        c.drawPixel(10,10, 123, 45, 67, 255);
+        c.setPixel(10,10, 123, 45, 67, 255);
         assertEquals(new Color(123, 45, 67, 255), c.getColor(10,10)); //pixel is set to the right color
         //nothing else is set to the color
         assertEquals(Color.white, c.getColor(11,10));
@@ -66,7 +66,7 @@ public class CanvasTest {
         assertSame(tl.get(0).second().getTile(0,1),tl.get(1).second().getTile(0,1));
         assertSame(tl.get(0).second().getTile(1,1),tl.get(1).second().getTile(1,1));
 
-        c.drawPixel(10,10,255,255,255,255); //"fake" update
+        c.setPixel(10,10,255,255,255,255); //"fake" update
         assertFalse(tl.get(1).first()[0][0]);
         assertFalse(tl.get(1).first()[1][0]);
         assertFalse(tl.get(1).first()[0][1]);
@@ -76,7 +76,7 @@ public class CanvasTest {
         assertSame(tl.get(0).second().getTile(0,1),tl.get(1).second().getTile(0,1));
         assertSame(tl.get(0).second().getTile(1,1),tl.get(1).second().getTile(1,1));
 
-        c.drawPixel(10,10,123,123,123,255); //update the first tile
+        c.setPixel(10,10,123,123,123,255); //update the first tile
 
         assertTrue(tl.get(1).first()[0][0]);
         assertFalse(tl.get(1).first()[1][0]);
@@ -95,11 +95,11 @@ public class CanvasTest {
     public void canvasReading(){
         COWTileCanvas c = new COWTileCanvas(1, 2*CanvasConstants.TILE_SIDE, 2*CanvasConstants.TILE_SIDE);
         c.copyTopLayer();
-        c.drawPixel(10,10,123,123,123,255);
-        c.drawPixel(40,10,123,123,123,255);
-        c.drawPixel(10,70,123,123,123,255);
-        c.drawPixel(100,10,123,123,123,255);
-        c.drawPixel(40,40,123,123,123,255);
+        c.setPixel(10,10,123,123,123,255);
+        c.setPixel(40,10,123,123,123,255);
+        c.setPixel(10,70,123,123,123,255);
+        c.setPixel(100,10,123,123,123,255);
+        c.setPixel(40,40,123,123,123,255);
 
         Color[][] image = c.getTop().toColorArray();
         assertEquals(Color.white, image[0][0]);
@@ -117,7 +117,7 @@ public class CanvasTest {
     @Test
     public void errorCatching(){
         COWTileCanvas c = new COWTileCanvas(1, 2*CanvasConstants.TILE_SIDE, 2*CanvasConstants.TILE_SIDE);
-        assertDoesNotThrow(() -> c.drawPixel(1000,1000,123,123,123,255));
+        assertDoesNotThrow(() -> c.setPixel(1000,1000,123,123,123,255));
     }
 
 }

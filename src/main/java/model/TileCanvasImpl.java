@@ -83,21 +83,26 @@ public class TileCanvasImpl implements TiledCanvas{
     }
 
     @Override
-    public void drawPixel(int x, int y, int r, int g, int b, int a) {
+    public void setPixel(int x, int y, int r, int g, int b, int a) {
         //oob check
         if(x < 0 || x >= getWidth() || y < 0 || y >= getHeight()){
             return;
         }
         int tileX = x/CanvasConstants.TILE_SIDE;
         int tileY = y/CanvasConstants.TILE_SIDE;
-        Color tileColor = getColor(x,y);
-        if(a==255){
-            canvasTiles[tileY][tileX].colorArray[y % CanvasConstants.TILE_SIDE][x % CanvasConstants.TILE_SIDE] = new Color(r,g,b,a);
-        }else{
-            Color nc = DrawUtil.compositeOver(tileColor, new Color(r,g,b,a));
-            canvasTiles[tileY][tileX].colorArray[y % CanvasConstants.TILE_SIDE][x % CanvasConstants.TILE_SIDE] = nc;
-        }
+        canvasTiles[tileY][tileX].colorArray[y % CanvasConstants.TILE_SIDE][x % CanvasConstants.TILE_SIDE] = new Color(r,g,b,a);
     }
+
+    @Override
+    public void compositePixel(int x, int y, int r, int g, int b, int a) {
+        if(x < 0 || x >= getWidth() || y < 0 || y >= getHeight()){
+            return;
+        }
+        Color tileColor = getColor(x,y);
+        Color nc = DrawUtil.compositeOver(tileColor, new Color(r,g,b,a));
+        setPixel(x,y,nc.getRed(),nc.getGreen(),nc.getBlue(),nc.getAlpha());
+    }
+
 
     @Override
     public TileCanvasImpl copy() {

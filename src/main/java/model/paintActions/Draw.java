@@ -10,17 +10,17 @@ import java.awt.*;
  * Action that indicates a user is drawing on the canvas,
  */
 public class Draw implements PaintAction, Undoable {
-    private int prevX;
-    private int prevY;
-    private int x;
-    private int y;
-    private int thickness;
-    private int r;
-    private int g;
-    private int b;
-    private int a;
-    private int id;
-    private UndoStatus status = UndoStatus.DONE;
+    protected int prevX;
+    protected int prevY;
+    protected int x;
+    protected int y;
+    protected int thickness;
+    protected int r;
+    protected int g;
+    protected int b;
+    protected int a;
+    protected int id;
+    protected UndoStatus status = UndoStatus.DONE;
 
     public Draw(int prevX, int prevY, int x, int y, int t, int r, int g, int b, int a, int id){
         this.prevX = prevX;
@@ -43,14 +43,18 @@ public class Draw implements PaintAction, Undoable {
     @Override
     public void apply(Canvas canvas) {
         if(status != UndoStatus.DONE) return;
-        if( prevX < 0 || prevX > canvas.getWidth() || prevY < 0 || prevY > canvas.getWidth()) return;
-        if( x < 0 || x > canvas.getWidth() || y < 0 || y > canvas.getWidth()) return;
+        if( prevX < 0 || prevX > canvas.getWidth() || prevY < 0 || prevY > canvas.getHeight()) return;
+        if( x < 0 || x > canvas.getWidth() || y < 0 || y > canvas.getHeight()) return;
         //System.out.println("applied Draw");
         Point[] markedPoints = DrawUtil.bresenhamLine(prevX, prevY, x, y);
         for(Point p : markedPoints){
-            if( p.x < 0 || p.x > canvas.getWidth() || p.y < 0 || p.y > canvas.getWidth()) continue;
-            canvas.drawPixel(p.x,p.y,r,g,b,a);
+            Point[] points = DrawUtil.filledCircle(p.x,p.y,thickness);
+            for(Point pp : points){
+                if( pp.x < 0 || pp.x > canvas.getWidth() || pp.y < 0 || pp.y > canvas.getHeight()) continue;
+                canvas.compositePixel(pp.x,pp.y,r,g,b,a);
+            }
         }
+
     }
 
     @Override
@@ -78,10 +82,14 @@ public class Draw implements PaintAction, Undoable {
         return status;
     }
 
+    public boolean canEqual(Object o){
+        return (o instanceof Draw);
+    }
+
     @Override
     public boolean equals(Object o){
         if(o instanceof Draw bs){
-            return (prevX==bs.prevX
+            return bs.canEqual(this) && (prevX==bs.prevX
                     && prevY==bs.prevY
                     && x==bs.x
                     && y==bs.y

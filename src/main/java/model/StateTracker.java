@@ -95,10 +95,10 @@ public class StateTracker {
         for(int i=lastSyncIndex.indexNumber+1; i<timeline.size(); i++){
             BoundingBox bb = timeline.get(i).getBoundingBox();
 
-            int minXTile = bb.minX / CanvasConstants.TILE_SIDE;
-            int maxXTile = bb.maxX / CanvasConstants.TILE_SIDE;
-            int minYTile = bb.minY / CanvasConstants.TILE_SIDE;
-            int maxYTile = bb.maxY / CanvasConstants.TILE_SIDE;
+            int minXTile = Math.clamp(bb.minX,0,canvas.getWidth()) / CanvasConstants.TILE_SIDE;
+            int maxXTile = Math.clamp(bb.maxX,0,canvas.getWidth()) / CanvasConstants.TILE_SIDE;
+            int minYTile = Math.clamp(bb.minY,0,canvas.getHeight()) / CanvasConstants.TILE_SIDE;
+            int maxYTile = Math.clamp(bb.maxY,0,canvas.getHeight()) / CanvasConstants.TILE_SIDE;
 
             for(int y = minYTile;y<=maxYTile;y++){
                 for(int x = minXTile;x<=maxXTile;x++){

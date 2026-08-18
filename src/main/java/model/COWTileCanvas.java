@@ -1,6 +1,7 @@
 package model;
 
 import model.constants.CanvasConstants;
+import model.helpers.DrawUtil;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -64,7 +65,7 @@ public class COWTileCanvas implements LayeredCanvas<TiledCanvas>{
     }
 
     @Override
-    public void drawPixel(int x, int y, int r, int g, int b, int a) {
+    public void setPixel(int x, int y, int r, int g, int b, int a) {
         //oob check
         if(x < 0 || x >= getWidth() || y < 0 || y >= getHeight()){
             return;
@@ -81,8 +82,18 @@ public class COWTileCanvas implements LayeredCanvas<TiledCanvas>{
                 CanvasTile newTile = new CanvasTile(oldTile.tileX, oldTile.tileY, oldTile.width, oldTile.height, CanvasTile.copyColors(oldTile.colorArray));
                 tileLayers.getLast().second().setTile(tileX, tileY, newTile);
             }
-            tileLayers.getLast().second().drawPixel(x,y,r,g,b,a);
+            tileLayers.getLast().second().setPixel(x,y,r,g,b,a);
         }
+    }
+
+    @Override
+    public void compositePixel(int x, int y, int r, int g, int b, int a){
+        if(x < 0 || x >= getWidth() || y < 0 || y >= getHeight()){
+            return;
+        }
+        Color tileColor = getColor(x,y);
+        Color nc = DrawUtil.compositeOver(tileColor, new Color(r,g,b,a));
+        setPixel(x,y,nc.getRed(),nc.getGreen(),nc.getBlue(),nc.getAlpha());
     }
 
     @Override
