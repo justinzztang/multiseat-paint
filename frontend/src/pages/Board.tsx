@@ -600,7 +600,7 @@ function Board(){
                             <canvas
                                 ref={canvasRef}
                                 className="absolute top-0 left-0 image-render-[pixelated] z-50"
-                                style={{ width: `${width}px`, height: `${height}px` }}
+                                style={{ width: `${width}px`, height: `${height}px`, pointerEvents: status==="Connected" ? "auto" : "none"}}
                                 onPointerDown={beginStroke}
                                 onPointerMove={pointerMove}
                                 onPointerUp={pointerUp}
