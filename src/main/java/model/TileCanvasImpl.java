@@ -2,6 +2,7 @@ package model;
 
 import model.constants.CanvasConstants;
 import model.helpers.DrawUtil;
+import model.paintActions.Draw;
 
 import java.awt.*;
 
@@ -24,10 +25,10 @@ public class TileCanvasImpl implements TiledCanvas{
             for(int tx=0; tx<w; tx+=CanvasConstants.TILE_SIDE){
                 int tileWidth = Math.min(w-tx, CanvasConstants.TILE_SIDE);
                 int tileHeight = Math.min(h-ty, CanvasConstants.TILE_SIDE);
-                Color[][] tileColors = new Color[tileHeight][tileWidth];
+                int[][] tileColors = new int[tileHeight][tileWidth];
                 for(int y=0; y< tileHeight; y++){
                     for(int x=0; x<tileWidth;x++){
-                        tileColors[y][x] = new Color(0,0,0,0);
+                        tileColors[y][x] = DrawUtil.EfficientColor.toColor(0,0,0,0);
                     }
                 }
                 temp[ty/CanvasConstants.TILE_SIDE][tx/CanvasConstants.TILE_SIDE] = new CanvasTile(tx/CanvasConstants.TILE_SIDE, ty/CanvasConstants.TILE_SIDE, tileWidth, tileHeight, tileColors);
@@ -76,7 +77,7 @@ public class TileCanvasImpl implements TiledCanvas{
     }
 
     @Override
-    public Color getColor(int x, int y) {
+    public int getColor(int x, int y) {
         int tileX = x/CanvasConstants.TILE_SIDE;
         int tileY = y/CanvasConstants.TILE_SIDE;
         return canvasTiles[tileY][tileX].colorArray[y % CanvasConstants.TILE_SIDE][x % CanvasConstants.TILE_SIDE];
@@ -90,7 +91,7 @@ public class TileCanvasImpl implements TiledCanvas{
         }
         int tileX = x/CanvasConstants.TILE_SIDE;
         int tileY = y/CanvasConstants.TILE_SIDE;
-        canvasTiles[tileY][tileX].colorArray[y % CanvasConstants.TILE_SIDE][x % CanvasConstants.TILE_SIDE] = new Color(r,g,b,a);
+        canvasTiles[tileY][tileX].colorArray[y % CanvasConstants.TILE_SIDE][x % CanvasConstants.TILE_SIDE] = DrawUtil.EfficientColor.toColor(r,g,b,a);
     }
 
     @Override
@@ -98,9 +99,12 @@ public class TileCanvasImpl implements TiledCanvas{
         if(x < 0 || x >= getWidth() || y < 0 || y >= getHeight()){
             return;
         }
-        Color tileColor = getColor(x,y);
-        Color nc = DrawUtil.compositeOver(tileColor, new Color(r,g,b,a));
-        setPixel(x,y,nc.getRed(),nc.getGreen(),nc.getBlue(),nc.getAlpha());
+        int tileColor = getColor(x,y);
+        int nc = DrawUtil.compositeOver(tileColor, DrawUtil.EfficientColor.toColor(r,g,b,a));
+        setPixel(x,y, DrawUtil.EfficientColor.getRed(nc),
+                DrawUtil.EfficientColor.getGreen(nc),
+                DrawUtil.EfficientColor.getBlue(nc),
+                DrawUtil.EfficientColor.getAlpha(nc));
     }
 
 
@@ -116,9 +120,9 @@ public class TileCanvasImpl implements TiledCanvas{
     }
 
     @Override
-    public Color[][] toColorArray(){
+    public int[][] toColorArray(){
 
-        Color[][] tileColors = new Color[height][width];
+        int[][] tileColors = new int[height][width];
 
         for(int ty=0; ty<height; ty+=CanvasConstants.TILE_SIDE){
             for(int tx=0; tx<width; tx+=CanvasConstants.TILE_SIDE){

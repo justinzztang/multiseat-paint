@@ -116,6 +116,11 @@ public class ActionPointTracker<E> {
         availableUndos.addLast(unavailableUndos.removeLast());
     }
 
-
+    public void remove(E point){ //inefficient, but # of operations so low it doesnt matter
+        unavailableUndos.remove(point);
+        unavailableRedos.remove(point);
+        availableUndos.remove(point);
+        availableRedos.remove(point);
+    }
 
 }

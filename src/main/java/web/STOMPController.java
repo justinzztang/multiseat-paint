@@ -56,7 +56,7 @@ public class STOMPController {
         };
 
         if(action.type.equals("breakpoint")) PaintServer.stateTracker.debugBreakpoint();
-        if(action.type.equals("cleanUp")) PaintServer.stateTracker.cleanTimeline();
+        if(action.type.equals("cleanUp")) PaintServer.stateTracker.actuallyCleanupGarbage();
 
         if(paintAction != null){
             PaintServer.stateTracker.receivePaintAction(paintAction);

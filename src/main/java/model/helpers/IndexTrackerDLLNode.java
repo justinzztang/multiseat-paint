@@ -42,6 +42,7 @@ public class IndexTrackerDLLNode implements Iterable<IndexTrackerDLLNode>, Compa
      * Splice out this node, and join the previous and next nodes, if they exist
      */
     public void spliceOut(){
+        deleted = true;
         if(next == null){
             if(prev == null){
                 return; //nothing happens
@@ -58,7 +59,6 @@ public class IndexTrackerDLLNode implements Iterable<IndexTrackerDLLNode>, Compa
         }
         next.prev = prev;
         prev.next = next;
-        deleted = true;
     }
 
     @Override

@@ -18,7 +18,7 @@ public interface Canvas {
     int getHeight();
 
     /** @return the color at the provided coordinates */
-    Color getColor(int x, int y);
+    int getColor(int x, int y);
 
     /** Set the RGBA color of a pixel at the provided coordinates */
     void setPixel(int x, int y, int r, int g, int b, int a);
@@ -30,5 +30,5 @@ public interface Canvas {
     Canvas copy();
 
     /** @return a 2d array of Colors stored by the canvas */
-    Color[][] toColorArray();
+    int[][] toColorArray();
 }

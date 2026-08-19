@@ -40,7 +40,7 @@ export function hexToColor(hex:string):Color | null{
 export function colorToHex(c:Color):string{
 
     //thanks gemini
-    return '#' + Array.from([c.r, c.g, c.b, c.a])
+    return '#' + Array.from([c.r, c.g, c.b]) //TODO transparency doesnt work
         .map(val => val.toString(16).padStart(2, '0'))
         .join('')
 }

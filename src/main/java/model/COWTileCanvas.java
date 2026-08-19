@@ -60,7 +60,7 @@ public class COWTileCanvas implements LayeredCanvas<TiledCanvas>{
     }
 
     @Override
-    public Color getColor(int x, int y) {
+    public int getColor(int x, int y) {
         return tileLayers.getLast().second().getColor(x, y);
     }
 
@@ -72,8 +72,8 @@ public class COWTileCanvas implements LayeredCanvas<TiledCanvas>{
         }
         int tileX = x/CanvasConstants.TILE_SIDE;
         int tileY = y/CanvasConstants.TILE_SIDE;
-        Color tileColor = getColor(x,y);
-        if(!tileColor.equals(new Color(r,g,b,a)) || a!=255){ //caveat for transparency
+        int tileColor = getColor(x,y);
+        if(tileColor != DrawUtil.EfficientColor.toColor(r,g,b,a) || a!=255){ //caveat for transparency
             //if its not an original copy, make a new copy
             if(!tileLayers.getLast().first()[tileY][tileX]){
                 //create its own array
@@ -91,9 +91,12 @@ public class COWTileCanvas implements LayeredCanvas<TiledCanvas>{
         if(x < 0 || x >= getWidth() || y < 0 || y >= getHeight()){
             return;
         }
-        Color tileColor = getColor(x,y);
-        Color nc = DrawUtil.compositeOver(tileColor, new Color(r,g,b,a));
-        setPixel(x,y,nc.getRed(),nc.getGreen(),nc.getBlue(),nc.getAlpha());
+        int tileColor = getColor(x,y);
+        int nc = DrawUtil.compositeOver(tileColor, DrawUtil.EfficientColor.toColor(r,g,b,a));
+        setPixel(x,y,DrawUtil.EfficientColor.getRed(nc),
+                DrawUtil.EfficientColor.getGreen(nc),
+                DrawUtil.EfficientColor.getBlue(nc),
+                DrawUtil.EfficientColor.getAlpha(nc));
     }
 
     @Override
@@ -105,7 +108,7 @@ public class COWTileCanvas implements LayeredCanvas<TiledCanvas>{
     }
 
     @Override
-    public Color[][] toColorArray() {
+    public int[][] toColorArray() {
         return getTop().toColorArray();
     }
 
@@ -146,9 +149,12 @@ public class COWTileCanvas implements LayeredCanvas<TiledCanvas>{
     @Override
     public String toString(){
         StringBuilder canvasString = new StringBuilder();
-        for(Color[] row : getTop().toColorArray()){
-            for(Color pixel : row){
-                String hex = String.format("#%02x%02x%02x", pixel.getRed(), pixel.getGreen(), pixel.getBlue());
+        for(int[] row : getTop().toColorArray()){
+            for(int pixel : row){
+                String hex = String.format("#%02x%02x%02x",
+                        DrawUtil.EfficientColor.getRed(pixel),
+                        DrawUtil.EfficientColor.getGreen(pixel),
+                        DrawUtil.EfficientColor.getBlue(pixel));
                 canvasString.append("[").append(hex).append("]");
             }
             canvasString.append("\n");

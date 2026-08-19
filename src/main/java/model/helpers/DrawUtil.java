@@ -158,29 +158,29 @@ public class DrawUtil {
     }
 
     //https://stackoverflow.com/questions/7438263/alpha-compositing-algorithm-blend-modes
-    public static Color compositeOver(Color bg, Color fg){
+    public static int compositeOver(int bg, int fg){
 
-        int newAlpha = (bg.getAlpha()*255 + fg.getAlpha()*255 - bg.getAlpha() * fg.getAlpha())/255;
+        int newAlpha = (EfficientColor.getAlpha(bg)*255 + EfficientColor.getAlpha(fg)*255 - EfficientColor.getAlpha(bg) * EfficientColor.getAlpha(fg))/255;
 
-        int bgR = bg.getRed() * bg.getAlpha();
-        int fgR = fg.getRed() * fg.getAlpha();
-        int newR = fgR*255 + bgR * (255 - fg.getAlpha());
+        int bgR = EfficientColor.getRed(bg) * EfficientColor.getAlpha(bg);
+        int fgR = EfficientColor.getRed(fg) * EfficientColor.getAlpha(fg);
+        int newR = fgR*255 + bgR * (255 - EfficientColor.getAlpha(fg));
         newR = newR / 255 / newAlpha;
 
-        int bgG = bg.getGreen() * bg.getAlpha();
-        int fgG = fg.getGreen() * fg.getAlpha();
-        int newG = fgG*255 + bgG * (255 - fg.getAlpha());
+        int bgG = EfficientColor.getGreen(bg) * EfficientColor.getAlpha(bg);
+        int fgG = EfficientColor.getGreen(fg) * EfficientColor.getAlpha(fg);
+        int newG = fgG*255 + bgG * (255 - EfficientColor.getAlpha(fg));
         newG = newG / 255 / newAlpha;
 
-        int bgB = bg.getBlue() * bg.getAlpha();
-        int fgB = fg.getBlue() * fg.getAlpha();
-        int newB = fgB*255 + bgB * (255 - fg.getAlpha());
+        int bgB = EfficientColor.getBlue(bg) * EfficientColor.getAlpha(bg);
+        int fgB = EfficientColor.getBlue(fg) * EfficientColor.getAlpha(fg);
+        int newB = fgB*255 + bgB * (255 - EfficientColor.getAlpha(fg));
         newB = newB / 255 / newAlpha;
 
-        return new Color(newR, newG, newB, newAlpha);
+        return EfficientColor.toColor(newR, newG, newB, newAlpha);
     }
 
-    public static void floodFill(Color initialColor, int x, int y, Canvas canvas, ArrayList<Point> accumulator){
+    public static void floodFill(int initialColor, int x, int y, Canvas canvas, ArrayList<Point> accumulator){
 
         boolean[][] visited = new boolean[canvas.getHeight()][canvas.getWidth()];
 
@@ -197,12 +197,36 @@ public class DrawUtil {
 
             for(int i=0;i<4;i++){
                 if(p.x+dxs[i] < 0 || p.x+dxs[i] >= canvas.getWidth() || p.y+dys[i] < 0 || p.y+dys[i] >= canvas.getHeight()) continue;
-                if(!canvas.getColor(p.x+dxs[i],p.y+dys[i]).equals(initialColor)) continue;
+                if(canvas.getColor(p.x+dxs[i],p.y+dys[i]) != (initialColor)) continue;
                 if(visited[p.y+dys[i]][p.x+dxs[i]]) continue;
                 visited[p.y+dys[i]][p.x+dxs[i]] = true;
                 pointQueue.add(new Point(p.x+dxs[i],p.y+dys[i]));
             }
         }
     }
+
+    /** Utils for storing colors as 4 byte integers */
+    public static class EfficientColor{
+
+        /** First 8 bits are alpha, 2nd 8 are red, 3rd 8 are green, last 8 are blue, in accordance with awt.Color's format*/
+        public static int toColor(int r, int g, int b, int a){
+            return (a << 24) | (r << 16) | (g << 8) | b;
+        }
+
+        public static int getAlpha(int color){
+            return color >>> 24;
+        }
+        public static int getRed(int color){
+            return (color >>> 16) & 0xff;
+        }
+        public static int getGreen(int color){
+            return (color >>> 8) & 0xff;
+        }
+        public static int getBlue(int color){
+            return color & 0xff;
+        }
+    }
+
+
 
 }

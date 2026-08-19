@@ -1,5 +1,6 @@
 package model.paintActions;
 
+import model.COWTileCanvas;
 import model.Canvas;
 import model.helpers.BoundingBox;
 import model.helpers.DrawUtil;

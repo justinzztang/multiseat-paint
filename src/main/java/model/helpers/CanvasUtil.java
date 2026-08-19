@@ -115,12 +115,12 @@ public class CanvasUtil {
             //colordata
             for (int y = 0; y < h; y++) {
                 for (int x = 0; x < w; x++) {
-                    Color c = tile.colorArray[y][x];
+                    int c = tile.colorArray[y][x];
 
-                    baos.write(c.getRed());
-                    baos.write(c.getGreen());
-                    baos.write(c.getBlue());
-                    baos.write(c.getAlpha());
+                    baos.write(DrawUtil.EfficientColor.getRed(c));
+                    baos.write(DrawUtil.EfficientColor.getGreen(c));
+                    baos.write(DrawUtil.EfficientColor.getBlue(c));
+                    baos.write(DrawUtil.EfficientColor.getAlpha(c));
                 }
             }
         }

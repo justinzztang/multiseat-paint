@@ -143,7 +143,6 @@ function Board(){
             lineCtxRef.current.putImageData(
                 imageData, 0, 0
             );
-            //console.log(imageData);
             ctx.drawImage(lineCanvasRef.current,0,0, width, height, 0, 0, width, height);
 
         },[drawCell, bresenhamLine, thickness, toolName]
@@ -169,10 +168,8 @@ function Board(){
     const [status, setStatus] = useState("Not Connected");
     const [userID, setUserID] = useState(-1);
 
-    //this one works
     const sendWebSocketMessage = useCallback(
         (msg:WebSocketMessage) => {
-            //console.log(msg);
             const client = stompRef.current;
             if (client?.connected){
                 client.publish({
@@ -188,15 +185,12 @@ function Board(){
     const receiveWebSocketMessage = useCallback(
         (msg:WebSocketMessage) => {
             switch (msg.type) {
-                case "BeginStroke":
-                    console.log("received beginstroke");
-                    break;
                 case "IDAssignment":
-                    console.log("assigned user id: " + msg.userID);
+                    console.log("Assigned user ID: " + msg.userID);
                     setUserID(msg.userID);
                     break;
                 default:
-                    console.log("received some json thing");
+                    console.log("Received some unrecognized json message");
             }
         },
         []
@@ -209,8 +203,6 @@ function Board(){
 
             const bytes:Uint8Array = msg.binaryBody;
             const tiles = (bytes[0] << 8) + (bytes[1]);
-
-            //console.log(bytes);
 
             if(syncCanvasRef.current.width !== width || syncCanvasRef.current.height !== height){
                 syncCanvasRef.current.width = width;
@@ -227,13 +219,10 @@ function Board(){
 
                 index +=8;
 
-
-
                 const imageData = bg.createImageData(width, height);
                 const data = imageData.data;
                 //the next width*height*4 bytes are colordata
                 data.set(bytes.subarray(index, index + width*height*4));
-                //console.log(startingX, startingY);
                 // @ts-ignore
                 syncCtxRef.current.putImageData(imageData,startingX,startingY);
 
@@ -247,16 +236,6 @@ function Board(){
                 index+=width*height*4;
 
             }
-
-            /*
-            bg.save();
-            //bg.setTransform(1,0,0,1,0,0);
-            bg.drawImage(syncCanvasRef.current,0,0);
-            bg.restore();
-            */
-
-
-
             transferTopToBackground();
         },
         [transferTopToBackground]
@@ -331,10 +310,9 @@ function Board(){
         (e: React.PointerEvent<HTMLCanvasElement>) => {
 
             if(toolName === "Eyedropper"){
-                //TODO eyedropper
                 const { x, y } = getPoint(e);
                 // @ts-ignore
-                const pixelData = backgroundCtxRef.current.getImageData(x,y,1,1).data;
+                const pixelData = backgroundCtxRef.current.getImageData(x*dpr,y*dpr,1,1).data;
 
 
                 const newColor = transparentOnWhite({r:pixelData[0], g:pixelData[1], b:pixelData[2], a:pixelData[3]});
@@ -512,6 +490,12 @@ function Board(){
         },[ sendWebSocketMessage, userID]
     );*/
 
+    const cleanUp = useCallback(
+        () => {
+            sendWebSocketMessage({type: "cleanUp", userID: userID});
+        },[ sendWebSocketMessage, userID]
+    );
+
     const thicknessSlider = useCallback(
         (e:React.ChangeEvent<HTMLInputElement>) => {
             setThickness(e.currentTarget.valueAsNumber);
@@ -526,10 +510,12 @@ function Board(){
                         <div className="flex justify-center">
                             <div className="flex justify-start overflow-x-auto border bg-white">
                                 <div className={"flex divide-x"}>
-                                    <button disabled={true} className="w-[150px] h-[50px]">{userID===-1 ? "Click Connect" : `Your ID is: ${userID}`}</button>
+                                    <button disabled={true} className="w-[150px] h-[50px]">{userID===-1 ? "Click Connect ->" : `Your ID is: ${userID}`}</button>
                                     <button disabled={status!=="Not Connected"} onClick={connectWebSocket} className="w-[150px] h-[50px] disabled:cursor-not-allowed">Connect</button>
                                     <button disabled={status==="Not Connected"} onClick={disconnect} className="w-[150px] h-[50px] disabled:cursor-not-allowed">Disconnect</button>
                                     <button className="w-[200px] h-[50px]">{status}</button>
+                                    {/*<button onClick={breakpoint}>breakpoint</button>*/}
+                                    <button onClick={cleanUp}>clean</button>
                                 </div>
                             </div>
                         </div>
@@ -584,12 +570,6 @@ function Board(){
                             </div>
                         </div>
                     </div>
-
-
-
-
-                    {/*<button onClick={breakpoint}>breakpoint|</button>*/}
-                    {/*<button onClick={cleanUp}>clean</button>*/}
                     <div className={"flex items-center justify-center"}>
                         <div className="relative mt-10" style={{ width: `${width}px`, height: `${height}px` }}>
                             <canvas
@@ -608,7 +588,7 @@ function Board(){
                             />
                         </div>
                     </div>
-                    <h1>footer</h1>
+                    <h1>Version 1.0.0</h1>
             </div>
         </>
     )

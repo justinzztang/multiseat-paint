@@ -254,6 +254,8 @@ public class StateTracker {
         try{
             ArrayList<PaintAction> filteredTimeline = new ArrayList<>();
 
+            int absMin = timeline.size() - CanvasConstants.MAX_TIMELINE_COMMANDS;
+
             int earliestUndoLimit;
             ArrayList<Integer> indList = new ArrayList<>();
             actionPointTracker.forEach((Integer id,ActionPointTracker<IndexTrackerDLLNode> apt) -> {
@@ -267,11 +269,53 @@ public class StateTracker {
             if(indList.isEmpty()){ earliestUndoLimit=0; } //no one has ANY undos? probably no ones drawn yet
             else{ earliestUndoLimit = Collections.min(indList); }
 
+            Set<Integer> userIDDeleteList = new HashSet<>();
+
             int curIndex = 0;
             assert(indexTrackerEnd.indexNumber < timeline.size());
             for(IndexTrackerDLLNode node : indexTrackerDLL){
+                assert(node.indexNumber == curIndex);
                 boolean add = true;
-                if(curIndex < earliestUndoLimit){ //do not add
+                if(userIDDeleteList.contains(timeline.get(curIndex).getUserID())){
+                    add = false;
+                    //splice out the node
+                    node.spliceOut();
+                    if(node.prev==null){
+                        indexTrackerHead = node.next;
+                    }
+                    if(node.next==null){
+                        indexTrackerEnd = node.prev;
+                    }
+                    //if this was a redopoint, we're done and the user id needs to be removed
+                    if(timeline.get(curIndex) instanceof Undoable undoable){
+                        assert(undoable.getPointType()!= Undoable.PointType.UNDOPOINT); //we're in here because we're deleting everything up to the next redo point, how did an undo point get here?
+                        if(undoable.getPointType()== Undoable.PointType.REDOPOINT){
+                            //if theres an unavailable redo with no corresponding available undo, it will be fixed eventually
+                            userIDDeleteList.remove(timeline.get(curIndex).getUserID());
+                            actionPointTracker.get(timeline.get(curIndex).getUserID()).remove(node);
+                        }
+                    }
+                }
+                else if(curIndex < absMin){ //do not add
+                    add = false;
+                    //splice out the node
+                    node.spliceOut();
+                    if(node.prev==null){
+                        indexTrackerHead = node.next;
+                    }
+                    if(node.next==null){
+                        indexTrackerEnd = node.prev;
+                    }
+                    //if this was an undopoint, we must delete everything else with the same user id until we get to the next redo point
+                    if(timeline.get(curIndex) instanceof Undoable undoable){
+                        if(undoable.getPointType()== Undoable.PointType.UNDOPOINT){
+                            userIDDeleteList.add(timeline.get(curIndex).getUserID());
+                            actionPointTracker.get(timeline.get(curIndex).getUserID()).remove(node);
+                        }
+                    }
+
+                }
+                else if(curIndex < earliestUndoLimit){ //do not add
                     add = false;
                     //splice out the node
                     node.spliceOut();
@@ -317,7 +361,6 @@ public class StateTracker {
                 }
                 if(firstSafeLayer >=0 ) pointToCanvasLayer.put(entry.getKey(), entry.getValue()-firstSafeLayer); //update the canvas layers
             }
-
             //delete the first few layers of the canvas
             if(firstSafeLayer > 0 ) canvas.deleteLayers(0,firstSafeLayer);
 
@@ -333,6 +376,10 @@ public class StateTracker {
     //debug and testing methods
     public void debugBreakpoint(){
         return;
+    }
+
+    public void actuallyCleanupGarbage(){
+        Runtime.getRuntime().gc();
     }
 
     public ArrayList<PaintAction> getTimeline() {

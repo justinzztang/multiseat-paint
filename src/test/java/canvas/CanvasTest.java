@@ -101,7 +101,7 @@ public class CanvasTest {
         c.setPixel(100,10,123,123,123,255);
         c.setPixel(40,40,123,123,123,255);
 
-        Color[][] image = c.getTop().toColorArray();
+        int[][] image = c.getTop().toColorArray();
         assertEquals(Color.white, image[0][0]);
         assertEquals(new Color(123,123,123,255), image[10][10]);
         assertEquals(new Color(123,123,123,255), image[10][40]);
