@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.MimeTypeUtils;
 
 import java.awt.*;
+import java.util.Arrays;
 
 
 @Service
@@ -24,7 +25,7 @@ public class Syncer {
         this.smt = smt;
     }
 
-    @Scheduled(fixedRate= 100)
+    @Scheduled(fixedRate= 200)
     public void syncCanvas(){
 
         //TODO: send out sync messages regarding the uncommitted canvas
@@ -42,6 +43,9 @@ public class Syncer {
         Message<byte[]> message = MessageBuilder.createMessage(imageByteStream, accessor.getMessageHeaders());
 
         smt.send("/update/whattoupdate", message);
+
+
+
     }
 
     @Scheduled(fixedRate= 10000)

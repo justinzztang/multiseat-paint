@@ -44,6 +44,7 @@ public class STOMPController {
             case "BeginErase" -> new BeginErase(action.x, action.y, action.thickness, action.userID);
             case "Erase" -> new Erase(action.prevX, action.prevY, action.x, action.y, action.thickness, action.userID);
             case "EndErase" -> new EndErase(action.x, action.y, action.thickness, action.userID);
+            case "Fill" -> new Fill(action.x, action.y, action.r, action.g, action.b, action.a, action.userID);
             default -> null;
         };
         ControlAction controlAction = switch (action.type) {

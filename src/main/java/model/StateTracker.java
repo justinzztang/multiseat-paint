@@ -6,6 +6,7 @@ import model.helpers.ActionPointTracker;
 import model.helpers.BoundingBox;
 import model.helpers.IndexTrackerDLLNode;
 import model.paintActions.*;
+import web.PaintServer;
 
 import java.awt.*;
 import java.util.*;
@@ -88,11 +89,12 @@ public class StateTracker {
 
     /** @return an array of CanvasTiles that were modified since the last synchronization */
     public CanvasTile[] affectedAreaTiles(boolean shouldUpdate){
+
         if(timeline.isEmpty() || lastSyncIndex.indexNumber == timeline.size()-1){
             return new CanvasTile[]{}; //empty
         }
         Set<CanvasTile> affectedTiles = new HashSet<>();
-        for(int i=lastSyncIndex.indexNumber+1; i<timeline.size(); i++){
+        for(int i=lastSyncIndex.indexNumber; i<timeline.size(); i++){
             BoundingBox bb = timeline.get(i).getBoundingBox();
 
             int minXTile = Math.clamp(bb.minX,0,canvas.getWidth()) / CanvasConstants.TILE_SIDE;
@@ -227,7 +229,17 @@ public class StateTracker {
                 }
 
             }
-            paintAction.apply(canvas);
+            stateLock.readLock().lock();
+            try{
+                paintAction.apply(canvas);
+                if(paintAction instanceof Fill && !(paintAction instanceof EndFill)){
+                    PaintServer.stateTracker.receivePaintAction(new EndFill(0, 0, 0, 0, 0, 0, paintAction.getUserID()));
+                }
+            }
+            finally{
+                stateLock.readLock().unlock();
+            }
+
             indexTrackerEnd = temp;
             nodeCounter++;
         }

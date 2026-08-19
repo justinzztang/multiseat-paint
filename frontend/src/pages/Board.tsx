@@ -2,7 +2,7 @@ import React, {useCallback, useEffect, useRef, useState} from "react";
 
 import {Client, type IMessage} from "@stomp/stompjs";
 
-import type {Point, WebSocketMessage, Color} from "../utils/Utils.ts";
+import {type Point, type WebSocketMessage, type Color, transparentOnWhite, colorToHex} from "../utils/Utils.ts";
 
 import {hexToColor} from "../utils/Utils.ts";
 
@@ -42,9 +42,9 @@ function Board(){
     // if the pen is down
     const penDownRef = useRef(false);
 
-    const colorRef = useRef<HTMLInputElement | null>(null);
+    const [color, setColor] = useState("#000000");
 
-    const [erasing, setErasing] = useState(false);
+    const [toolName, setToolName] = useState("Pencil");
 
     const [thickness, setThickness] = useState(1);
 
@@ -56,7 +56,7 @@ function Board(){
 
     useEffect(() => {
         // @ts-ignore
-        colorRef.current.value = getRandomHexColor();
+        setColor(getRandomHexColor());
 
         if(!canvasRef.current || !backgroundCanvasRef.current){
             console.log("ERROR: canvas element not detected");
@@ -84,11 +84,6 @@ function Board(){
         backgroundCtxRef.current.scale(window.devicePixelRatio, window.devicePixelRatio);
         backgroundCtxRef.current.imageSmoothingEnabled = false;
 
-        if(!colorRef.current){
-            console.log("ERROR: color picker not detected");
-            return;
-        }
-
         }, []);
 
     const getPoint = useCallback( //TODO need a lot of modifications when you add zooming and stuff
@@ -110,11 +105,11 @@ function Board(){
 
     const drawLine = useCallback(
         (prevX : number, prevY: number, newX:number, newY:number) => {
+            if(toolName !== "Eraser" && toolName !== "Pencil") return; //TODO more robust system when i have more time
             const ctx = ctxRef.current;
             if (!ctx) return;
             const markedCells = bresenhamLine(prevX,prevY,newX,newY);
-            if(!colorRef.current) return;
-            let penColor = hexToColor(colorRef.current.value);
+            let penColor = hexToColor(color);
             if (!penColor) penColor = {r:0,g:0,b:0,a:255};
 
             if(lineCanvasRef.current.width !== width || lineCanvasRef.current.height !== height){
@@ -129,13 +124,13 @@ function Board(){
                 const markedPoints = thickCircle(cell.x, cell.y, thickness);
                 for(const point of markedPoints){
                     if(point.x < 0 || point.x >= width || point.y < 0 || point.y >= height) continue;
-                    if(erasing){//TODO handle erasing using transparency or background color
+                    if(toolName === "Eraser"){//TODO handle erasing using transparency or background color
                         data[point.y*width*4 + point.x*4] = 255;
                         data[point.y*width*4 + point.x*4+1] = 255;
                         data[point.y*width*4 + point.x*4+2] = 255;
                         data[point.y*width*4 + point.x*4+3] = 255;
                     }
-                    else{
+                    else if(toolName === "Pencil"){
                         data[point.y*width*4 + point.x*4] = penColor.r;
                         data[point.y*width*4 + point.x*4+1] = penColor.g;
                         data[point.y*width*4 + point.x*4+2] = penColor.b;
@@ -151,7 +146,7 @@ function Board(){
             //console.log(imageData);
             ctx.drawImage(lineCanvasRef.current,0,0, width, height, 0, 0, width, height);
 
-        },[drawCell, bresenhamLine, thickness, erasing]
+        },[drawCell, bresenhamLine, thickness, toolName]
     );
 
     const transferTopToBackground = useCallback(
@@ -171,7 +166,7 @@ function Board(){
 
     //websocket stuff
     const stompRef = useRef<Client | null>(null);
-    const [status, setStatus] = useState("disconnected");
+    const [status, setStatus] = useState("Not Connected");
     const [userID, setUserID] = useState(-1);
 
     //this one works
@@ -273,14 +268,14 @@ function Board(){
 
     //problem
     const connectWebSocket = useCallback(() => {
-        setStatus("connecting");
+        setStatus("Connecting...");
 
         const client = new Client({
             brokerURL: `ws://${window.location.hostname}:8080/update-websocket`,
             reconnectDelay: 5000,
             //debug: (str) => console.log("[stomp]", str),
             onConnect: () => {
-                setStatus("connected");
+                setStatus("Connected");
                 //its gotta be here
 
                 // @ts-ignore
@@ -310,6 +305,9 @@ function Board(){
 
                 }
 
+            },
+            onWebSocketError: () => {
+                setStatus("Reconnecting...");
             }
         });
 
@@ -322,6 +320,7 @@ function Board(){
 
     const disconnect = useCallback(() => {
         console.log("disconnected")
+        setStatus("Not Connected")
         stompRef.current?.deactivate();
         stompRef.current = null;
     }, []);
@@ -330,26 +329,57 @@ function Board(){
 
     const beginStroke = useCallback(
         (e: React.PointerEvent<HTMLCanvasElement>) => {
+
+            if(toolName === "Eyedropper"){
+                //TODO eyedropper
+                const { x, y } = getPoint(e);
+                // @ts-ignore
+                const pixelData = backgroundCtxRef.current.getImageData(x,y,1,1).data;
+
+
+                const newColor = transparentOnWhite({r:pixelData[0], g:pixelData[1], b:pixelData[2], a:pixelData[3]});
+
+                setColor(colorToHex(newColor));
+
+                return;
+            }
+            else if(toolName === "Fill"){
+                const { x, y } = getPoint(e);
+                const cellX = Math.floor(x / GRID_SIZE) * GRID_SIZE;
+                const cellY = Math.floor(y / GRID_SIZE) * GRID_SIZE;
+                let penColor = hexToColor(color);
+                if (!penColor) penColor = {r:0,g:0,b:0,a:255};
+
+                sendWebSocketMessage({
+                    type: "Fill",
+                    userID: userID,
+                    x: cellX,
+                    y: cellY,
+                    r: penColor.r,
+                    g: penColor.g,
+                    b: penColor.b,
+                    a: penColor.a
+                });
+                return;
+            }
+
             const { x, y } = getPoint(e);
             const ctx = ctxRef.current;
             if (!ctx) return;
-            //console.log("beginStroke");
-            //console.log(x);
 
             const cellX = Math.floor(x / GRID_SIZE) * GRID_SIZE;
             const cellY = Math.floor(y / GRID_SIZE) * GRID_SIZE;
 
             if(!ctxRef.current) return;
-            if(!colorRef.current) return;
-            let penColor = hexToColor(colorRef.current.value);
+            let penColor = hexToColor(color);
             if (!penColor) penColor = {r:0,g:0,b:0,a:255};
 
             const markedPoints = filledCircle(cellX, cellY, thickness);
             for(const point of markedPoints){
-                if(erasing){
+                if(toolName==="Eraser"){
                     drawCell(point.x, point.y, ctxRef.current, {r:255,g:255,b:255,a:255}); //TODO figure out how to do transparent erase/background color
                 }
-                else{
+                else if (toolName==="Pencil"){
                     drawCell(point.x, point.y, ctxRef.current, penColor);
                 }
             }
@@ -360,7 +390,7 @@ function Board(){
             penDownRef.current = true;
 
             //send message
-            if(erasing){
+            if(toolName === "Eraser"){
                 sendWebSocketMessage({
                     type: "BeginErase",
                     userID: userID,
@@ -369,7 +399,7 @@ function Board(){
                     thickness: thickness,
                 });
             }
-            else {
+            else if (toolName === "Pencil"){
                 sendWebSocketMessage({
                     type: "BeginStroke",
                     userID: userID,
@@ -383,25 +413,25 @@ function Board(){
                 });
             }
         },
-        [drawCell, getPoint, sendWebSocketMessage, userID, thickness,erasing]
+        [drawCell, getPoint, sendWebSocketMessage, userID, thickness,toolName]
     );
 
 
 
     const pointerMove = useCallback(
         (e:React.PointerEvent<HTMLCanvasElement>) =>{
+            if(toolName !== "Eraser" && toolName !== "Pencil") return; //TODO more robust system when i have more time
             if (!lastPointRef.current || !penDownRef.current) return;
             const {x,y} = getPoint(e);
             const last = lastPointRef.current;
             drawLine(last.x, last.y, x, y);
             lastPointRef.current = {x,y};
 
-            if(!colorRef.current) return;
-            let penColor = hexToColor(colorRef.current.value);
+            let penColor = hexToColor(color);
             if (!penColor) penColor = {r:0,g:0,b:0,a:255};
 
             //send message
-            if(erasing){
+            if(toolName==="Eraser"){
                 sendWebSocketMessage({
                     type: "Erase",
                     userID: userID,
@@ -412,7 +442,7 @@ function Board(){
                     thickness: thickness,
                 });
             }
-            else {
+            else if(toolName==="Pencil"){
                 sendWebSocketMessage({
                     type: "Draw",
                     userID: userID,
@@ -429,11 +459,13 @@ function Board(){
             }
 
         },
-        [getPoint, drawLine, sendWebSocketMessage, userID, thickness,erasing]
+        [getPoint, drawLine, sendWebSocketMessage, userID, thickness,toolName]
     );
 
     const pointerUp = useCallback(
         (e:React.PointerEvent<HTMLCanvasElement>) => {
+            if(toolName !== "Eraser" && toolName !== "Pencil") return; //TODO more robust system when i have more time
+
             if(!penDownRef.current) return;
 
             penDownRef.current = false;
@@ -441,7 +473,7 @@ function Board(){
 
             //send message
             const {x,y} = getPoint(e);
-            if(erasing){
+            if(toolName==="Eraser"){
                 sendWebSocketMessage({
                     type: "EndErase",
                     userID: userID,
@@ -450,7 +482,7 @@ function Board(){
                     thickness: thickness
                 });
             }
-            else {
+            else if(toolName==="Pencil"){
                 sendWebSocketMessage({
                     type: "EndStroke",
                     userID: userID,
@@ -460,7 +492,7 @@ function Board(){
                 });
             }
         },
-        [getPoint, sendWebSocketMessage, userID, thickness,erasing]
+        [getPoint, sendWebSocketMessage, userID, thickness,toolName]
     );
 
     const sendUndo = useCallback(
@@ -488,33 +520,95 @@ function Board(){
 
     return(
         <>
-            <div className="bg-gray-200 h-max">
-                <button onClick={connectWebSocket}>connect|</button>
-                <button onClick={disconnect}>disconnect|</button>
-                <button onClick={sendUndo}>undo|</button>
-                <button onClick={sendRedo}>redo|</button>
-                <input type="range" min={1} max={100} step={1} value={thickness} onChange={thicknessSlider}/>
-                <button onClick={() => setErasing(!erasing)}>|toggle eraser|</button>
-                {/*<button onClick={breakpoint}>breakpoint|</button>*/}
-                {/*<button onClick={cleanUp}>clean</button>*/}
-                <input ref={colorRef} type="color" id="strokeColor" name="strokeColor"></input>
-                <div className="relative ml-10" style={{ width: `${width}px`, height: `${height}px` }}>
-                    <canvas
-                        ref={backgroundCanvasRef}
-                        className="absolute top-0 left-0 bg-white image-render-[pixelated] z-10"
-                        style={{ width: `${width}px`, height: `${height}px` }}
-                    />
-                    <canvas
-                        ref={canvasRef}
-                        className="absolute top-0 left-0 image-render-[pixelated] z-50"
-                        style={{ width: `${width}px`, height: `${height}px` }}
-                        onPointerDown={beginStroke}
-                        onPointerMove={pointerMove}
-                        onPointerUp={pointerUp}
-                        onPointerOut={pointerUp}
-                    />
-                </div>
-                <h1>footer</h1>
+            <div className=" p-6 bg-slate-100">
+
+                    <div className="flex flex-col">
+                        <div className="flex justify-center">
+                            <div className="flex justify-start overflow-x-auto border bg-white">
+                                <div className={"flex divide-x"}>
+                                    <button disabled={true} className="w-[150px] h-[50px]">{userID===-1 ? "Click Connect" : `Your ID is: ${userID}`}</button>
+                                    <button disabled={status!=="Not Connected"} onClick={connectWebSocket} className="w-[150px] h-[50px] disabled:cursor-not-allowed">Connect</button>
+                                    <button disabled={status==="Not Connected"} onClick={disconnect} className="w-[150px] h-[50px] disabled:cursor-not-allowed">Disconnect</button>
+                                    <button className="w-[200px] h-[50px]">{status}</button>
+                                </div>
+                            </div>
+                        </div>
+                        <br/>
+                        <div className="flex justify-center">
+                            <div className = "flex overflow-x-auto justify-start divide-x bg-white">
+                                <div className = "flex flex-col divide-y divide-black border-t border-l border-b">
+                                    <div className = "flex divide-x divide-black">
+                                        <button className={`w-[75px] h-[75px] ${toolName === "Pencil" ? "bg-slate-200" : ""}`} onClick={() => setToolName("Pencil")}>Pencil</button>
+                                        <button className={`w-[75px] h-[75px] ${toolName === "Eraser" ? "bg-slate-200" : ""}`} onClick={() => setToolName("Eraser")}>Eraser</button>
+                                        <button className="w-[75px] h-[75px]" onClick={sendUndo}>Undo</button>
+                                    </div>
+                                    <div className = "flex divide-x divide-black">
+                                        <button className={`w-[75px] h-[75px] ${toolName === "Eyedropper" ? "bg-slate-200" : ""}`} onClick={() => setToolName("Eyedropper")}>Color Selector</button>
+                                        <button className={`w-[75px] h-[75px] ${toolName === "Fill" ? "bg-slate-200" : ""}`} onClick={() => setToolName("Fill")}>Fill</button>
+                                        <button className="w-[75px] h-[75px]" onClick={sendRedo}>Redo</button>
+                                    </div>
+                                </div>
+
+                                <div className = "flex-col items-center justify-center w-[150px] h-[153px] border-t border-b">
+                                    <div className="grid place-items-center">
+                                        <button className="h-[25px]">{thickness}px</button>
+                                        <div className={"w-[100px] h-[100px] flex items-center justify-center"}>
+                                            <button style={{ width: `${thickness}px`, height: `${thickness}px`, backgroundColor: color}} className="bg-pink-200 rounded-full"></button>
+                                        </div>
+                                        <input className="h-[25px]" type="range" min={1} max={100} step={1} value={thickness} onChange={thicknessSlider}/>
+                                    </div>
+                                </div>
+
+                                <div className = "flex flex-col divide-y divide-black border-t border-b">
+                                    <div className = "flex divide-x divide-black">
+                                        <button className="bg-[#000000] w-[75px] h-[75px]" onClick={()=> setColor("#000000")}></button>
+                                        <button className="bg-[#ED1C24] w-[75px] h-[75px]" onClick={()=> setColor("#ED1C24")}></button>
+                                        <button className="bg-[#FFF200] w-[75px] h-[75px]" onClick={()=> setColor("#FFF200")}></button>
+                                        <button className="bg-[#00A2E8] w-[75px] h-[75px]" onClick={()=> setColor("#00A2E8")}></button>
+                                        <button className="bg-[#3F48CC] w-[75px] h-[75px]" onClick={()=> setColor("#3F48CC")}></button>
+                                    </div>
+                                    <div className = "flex divide-x divide-black">
+                                        <button className="bg-[#FFFFFF] w-[75px] h-[75px]" onClick={()=> setColor("#FFFFFF")}></button>
+                                        <button className="bg-[#FFAEC9] w-[75px] h-[75px]" onClick={()=> setColor("#FFAEC9")}></button>
+                                        <button className="bg-[#FFC90E] w-[75px] h-[75px]" onClick={()=> setColor("#FFC90E")}></button>
+                                        <button className="bg-[#22B14C] w-[75px] h-[75px]" onClick={()=> setColor("#22B14C")}></button>
+                                        <button className="bg-[#A349A4] w-[75px] h-[75px]" onClick={()=> setColor("#A349A4")}></button>
+                                    </div>
+                                </div>
+                                <div className = "flex flex-col items-center justify-center w-[75px] h-[153px] border-t border-r border-b">
+                                    <div className="grid place-items-center h-max">
+                                        <button className="h-[25px]">Custom:</button>
+                                        <input className="w-[75px] h-[75px]" type="color" value={color} id="strokeColor" name="strokeColor" onChange={(e) => setColor(e.target.value)}></input>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+
+                    {/*<button onClick={breakpoint}>breakpoint|</button>*/}
+                    {/*<button onClick={cleanUp}>clean</button>*/}
+                    <div className={"flex items-center justify-center"}>
+                        <div className="relative mt-10" style={{ width: `${width}px`, height: `${height}px` }}>
+                            <canvas
+                                ref={backgroundCanvasRef}
+                                className="absolute top-0 left-0 bg-white image-render-[pixelated] z-10"
+                                style={{ width: `${width}px`, height: `${height}px` }}
+                            />
+                            <canvas
+                                ref={canvasRef}
+                                className="absolute top-0 left-0 image-render-[pixelated] z-50"
+                                style={{ width: `${width}px`, height: `${height}px` }}
+                                onPointerDown={beginStroke}
+                                onPointerMove={pointerMove}
+                                onPointerUp={pointerUp}
+                                onPointerOut={pointerUp}
+                            />
+                        </div>
+                    </div>
+                    <h1>footer</h1>
             </div>
         </>
     )

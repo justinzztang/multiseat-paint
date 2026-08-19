@@ -1,10 +1,10 @@
 package model.helpers;
 
-import java.awt.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.awt.Point;
+import java.awt.Color;
+import java.util.*;
+
+import model.Canvas;
 
 public class DrawUtil {
     //https://en.wikipedia.org/wiki/Bresenham's_line_algorithm
@@ -179,4 +179,30 @@ public class DrawUtil {
 
         return new Color(newR, newG, newB, newAlpha);
     }
+
+    public static void floodFill(Color initialColor, int x, int y, Canvas canvas, ArrayList<Point> accumulator){
+
+        boolean[][] visited = new boolean[canvas.getHeight()][canvas.getWidth()];
+
+        Queue<Point> pointQueue = new LinkedList<>();
+        pointQueue.add(new Point(x,y));
+        visited[y][x] = true;
+
+        while(!pointQueue.isEmpty()){
+            Point p = pointQueue.poll();
+            accumulator.add(p);
+
+            int[] dxs = {0,0,1,-1};
+            int[] dys = {-1,1,0,0};
+
+            for(int i=0;i<4;i++){
+                if(p.x+dxs[i] < 0 || p.x+dxs[i] >= canvas.getWidth() || p.y+dys[i] < 0 || p.y+dys[i] >= canvas.getHeight()) continue;
+                if(!canvas.getColor(p.x+dxs[i],p.y+dys[i]).equals(initialColor)) continue;
+                if(visited[p.y+dys[i]][p.x+dxs[i]]) continue;
+                visited[p.y+dys[i]][p.x+dxs[i]] = true;
+                pointQueue.add(new Point(p.x+dxs[i],p.y+dys[i]));
+            }
+        }
+    }
+
 }
