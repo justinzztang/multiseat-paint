@@ -8,24 +8,26 @@ import model.controlActions.Undo;
 import model.helpers.CanvasUtil;
 import model.paintActions.*;
 import org.springframework.context.event.EventListener;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
 import web.helpers.DTO.ServerMessageDTO;
 import web.helpers.DTO.UserActionDTO;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 @Controller
 public class STOMPController {
+
+    private static final Object locker = new Object();
 
     private final SimpMessagingTemplate smt;
     public STOMPController(SimpMessagingTemplate smt){
@@ -69,7 +71,16 @@ public class STOMPController {
 
         System.out.println("someone subscribed");
 
-        StompHeaderAccessor headers = StompHeaderAccessor.wrap(subEvent.getMessage());
+        Message<?> isolatedMessage;
+
+        synchronized (locker) {
+            isolatedMessage = MessageBuilder.createMessage(
+                subEvent.getMessage().getPayload(),
+                new MessageHeaders(new HashMap<>(subEvent.getMessage().getHeaders()))
+            );
+        }
+
+        StompHeaderAccessor headers = StompHeaderAccessor.wrap(isolatedMessage);
         StompCommand command = headers.getCommand();
         if(command == null || headers.getDestination() == null || !headers.getDestination().startsWith("/user") || !command.equals(StompCommand.SUBSCRIBE)) return;
 
@@ -95,17 +106,17 @@ public class STOMPController {
         syncr.setSessionId(headers.getSessionId());
         syncr.setLeaveMutable(true);
 
-        int userID=PaintServer.stateTracker.uniqueUsers;
+        int userID=PaintServer.stateTracker.uniqueUsers.get();
 
         if(headers.containsNativeHeader("sentUserID")){
             if(!headers.getNativeHeader("sentUserID").getFirst().equals("-1")){
                 userID = Integer.parseInt(headers.getNativeHeader("sentUserID").getFirst());
-                PaintServer.stateTracker.uniqueUsers--; //TODO idk about this one
+                PaintServer.stateTracker.uniqueUsers.getAndDecrement(); //TODO idk about this one
             }
         }
 
         smt.convertAndSendToUser(headers.getSessionId(),"/update/whattoupdate", new ServerMessageDTO("IDAssignment",userID), syncr.getMessageHeaders());
-        PaintServer.stateTracker.uniqueUsers++;
+        PaintServer.stateTracker.uniqueUsers.getAndIncrement();
 
     }
 

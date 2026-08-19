@@ -10,6 +10,7 @@ import web.PaintServer;
 
 import java.awt.*;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -22,7 +23,7 @@ public class StateTracker {
     public int id;
 
     /** The number of unique users that have sent an action to this stateTracker */
-    public int uniqueUsers = 0;
+    public AtomicInteger uniqueUsers = new AtomicInteger(0);
 
     //state
 
@@ -148,6 +149,7 @@ public class StateTracker {
     public synchronized void receiveControlAction(ControlAction controlAction){
 
         stateLock.writeLock().lock();
+        stateLock.readLock().lock();
         try {
             //create if not initialized
             if (!actionPointTracker.containsKey(controlAction.getUserID())) {
@@ -158,16 +160,12 @@ public class StateTracker {
             this.lcc = getLCC();
             lastSyncIndex = lcc;
 
-            stateLock.readLock().lock();
-            try {
-                controlAction.runAction(canvas, pointToCanvasLayer, timeline, apt, lcc);
-            }
-            finally{
-                stateLock.readLock().unlock();
-            }
+            controlAction.runAction(canvas, pointToCanvasLayer, timeline, apt, lcc);
         }
         finally{
             stateLock.writeLock().unlock();
+            stateLock.readLock().unlock();
+
         }
     }
 
@@ -177,6 +175,7 @@ public class StateTracker {
     public synchronized void receivePaintAction(PaintAction paintAction){
 
         stateLock.writeLock().lock();
+        stateLock.readLock().lock();
         try {
             //create if not initialized
             if (!actionPointTracker.containsKey(paintAction.getUserID())) {
@@ -229,29 +228,24 @@ public class StateTracker {
                 }
 
             }
-            stateLock.readLock().lock();
-            try{
-                paintAction.apply(canvas);
-                if(paintAction instanceof Fill && !(paintAction instanceof EndFill)){
-                    PaintServer.stateTracker.receivePaintAction(new EndFill(0, 0, 0, 0, 0, 0, paintAction.getUserID()));
-                }
-            }
-            finally{
-                stateLock.readLock().unlock();
-            }
 
+            paintAction.apply(canvas);
             indexTrackerEnd = temp;
             nodeCounter++;
+            if(paintAction instanceof Fill && !(paintAction instanceof EndFill)){
+                PaintServer.stateTracker.receivePaintAction(new EndFill(0, 0, 0, 0, 0, 0, paintAction.getUserID()));
+            }
         }
         finally {
             stateLock.writeLock().unlock();
+            stateLock.readLock().unlock();
         }
     }
 
     /** Clean up the timeline, deleting inaccessible actions such as overwritten actions and those before any undo limits
      * Also deletes unreachable layers of the canvas
      */
-    public void cleanTimeline(){
+    public synchronized void cleanTimeline(){
 
         if(timeline.isEmpty()) return;
         stateLock.writeLock().lock();
