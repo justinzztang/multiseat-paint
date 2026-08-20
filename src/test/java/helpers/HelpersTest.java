@@ -4,6 +4,7 @@ import model.CanvasTile;
 import model.TileCanvasImpl;
 import model.helpers.CanvasUtil;
 import model.helpers.BoundingBox;
+import model.constants.CanvasConstants;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,9 +17,9 @@ public class HelpersTest {
         BoundingBox a = new BoundingBox(1,2,3,4);
         BoundingBox b = BoundingBox.combine(a,a);
         assertEquals(1, b.minX);
-        assertEquals(1, b.minX);
-        assertEquals(1, b.minX);
-        assertEquals(1, b.minX);
+        assertEquals(2, b.minY);
+        assertEquals(3, b.maxX);
+        assertEquals(4, b.maxY);
         //intersecting
         a = new BoundingBox(1, 1, 3, 3);
         b = new BoundingBox(0, 0, 2, 6);
