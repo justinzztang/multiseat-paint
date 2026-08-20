@@ -99,6 +99,20 @@ public class CanvasTest {
     }
 
     @Test
+    public void deletionTests() {
+        COWTileCanvas c = new COWTileCanvas(1, 10, 10);
+        c.copyTopLayer();
+        assertEquals(2, c.getNumLayers());
+        c.deleteLayer(0);
+        assertEquals(1, c.getNumLayers());
+        c.copyTopLayer();
+        c.copyTopLayer();
+        assertEquals(3, c.getNumLayers());
+        c.deleteLayers(0, 2);
+        assertEquals(1, c.getNumLayers());
+    }
+
+    @Test
     public void canvasReading(){
         COWTileCanvas c = new COWTileCanvas(1, 2*CanvasConstants.TILE_SIDE, 2*CanvasConstants.TILE_SIDE);
         c.copyTopLayer();
