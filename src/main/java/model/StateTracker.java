@@ -6,7 +6,6 @@ import model.helpers.ActionPointTracker;
 import model.helpers.BoundingBox;
 import model.helpers.IndexTrackerDLLNode;
 import model.paintActions.*;
-import web.PaintServer;
 
 import java.awt.*;
 import java.util.*;
@@ -239,7 +238,7 @@ public class StateTracker {
             indexTrackerEnd = temp;
             nodeCounter++;
             if(paintAction instanceof Fill && !(paintAction instanceof EndFill)){
-                PaintServer.stateTracker.receivePaintAction(new EndFill(0, 0, 0, 0, 0, 0, paintAction.getUserID()));
+                this.receivePaintAction(new EndFill(0, 0, 0, 0, 0, 0, paintAction.getUserID()));
             }
         }
         finally {
