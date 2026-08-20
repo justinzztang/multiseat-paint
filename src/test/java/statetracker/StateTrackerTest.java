@@ -2,22 +2,24 @@ package statetracker;
 
 import model.*;
 
-import model.Canvas;
 import model.controlActions.Redo;
 import model.controlActions.Undo;
 import model.helpers.ActionPointTracker;
 import model.helpers.BoundingBox;
+import model.helpers.DrawUtil;
 import model.helpers.IndexTrackerDLLNode;
 import model.paintActions.*;
 import org.junit.jupiter.api.Test;
 
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class StateTrackerTest {
+
+    private static final int TRANSPARENT = DrawUtil.EfficientColor.toColor(0, 0, 0, 0);
+    private static final int BLACK = DrawUtil.EfficientColor.toColor(0, 0, 0, 255);
 
     @Test
     public void paintActionTests() throws Exception {
@@ -38,9 +40,9 @@ public class StateTrackerTest {
         assertEquals(new Draw(1,1,5,5,1,0,0,0,255, 0), tl.get(1));
         assertEquals(new EndStroke(5,5,1,0), tl.get(2));
 
-        assertEquals(Color.white, c.getColor(0,0));
-        assertEquals(new Color(0,0,0), c.getColor(1,1));
-        assertEquals(new Color(0,0,0), c.getColor(3,3));
+        assertEquals(TRANSPARENT, c.getColor(0,0));
+        assertEquals(BLACK, c.getColor(1,1));
+        assertEquals(BLACK, c.getColor(3,3));
         assertEquals(2,c.getNumLayers());
 
         assertNotNull(apt.get(0));
@@ -59,9 +61,9 @@ public class StateTrackerTest {
         assertEquals(new Draw(1,1,5,5,1,0,0,0,255, 0), tl.get(4));
         assertEquals(new EndStroke(5,5,1,0), tl.get(5));
 
-        assertEquals(Color.white, c.getColor(0,0));
-        assertEquals(new Color(0,0,0), c.getColor(1,1));
-        assertEquals(new Color(0,0,0), c.getColor(3,3));
+        assertEquals(TRANSPARENT, c.getColor(0,0));
+        assertEquals(BLACK, c.getColor(1,1));
+        assertEquals(BLACK, c.getColor(3,3));
         assertEquals(3,c.getNumLayers());
 
         assertNotNull(apt.get(0));
@@ -103,25 +105,25 @@ public class StateTrackerTest {
 
         st.receiveControlAction(new Undo(0));
         //updates the canvas, apt, lcc
-        assertEquals(Color.white, c.getColor(1,1));
-        assertEquals(Color.white, c.getColor(3,3));
-        assertEquals(Color.white, c.getColor(5,5));
+        assertEquals(TRANSPARENT, c.getColor(1,1));
+        assertEquals(TRANSPARENT, c.getColor(3,3));
+        assertEquals(TRANSPARENT, c.getColor(5,5));
 
         assertEquals(0,apt.get(0).getEarliestUnavailableUndoPoint().indexNumber);
         assertEquals(2,apt.get(0).getEarliestRedoPoint().indexNumber);
 
         st.receiveControlAction(new Redo(0));
-        assertEquals(Color.black, c.getColor(1,1));
-        assertEquals(Color.black, c.getColor(3,3));
-        assertEquals(Color.black, c.getColor(5,5));
+        assertEquals(BLACK, c.getColor(1,1));
+        assertEquals(BLACK, c.getColor(3,3));
+        assertEquals(BLACK, c.getColor(5,5));
 
         assertEquals(0,apt.get(0).getLatestUndoPoint().indexNumber);
         assertEquals(2,apt.get(0).getLatestUnavailableRedoPoint().indexNumber);
 
         st.receiveControlAction(new Undo(1)); //no effect
-        assertEquals(Color.black, c.getColor(1,1));
-        assertEquals(Color.black, c.getColor(3,3));
-        assertEquals(Color.black, c.getColor(5,5));
+        assertEquals(BLACK, c.getColor(1,1));
+        assertEquals(BLACK, c.getColor(3,3));
+        assertEquals(BLACK, c.getColor(5,5));
         assertEquals(0,apt.get(0).getLatestUndoPoint().indexNumber);
         assertEquals(2,apt.get(0).getLatestUnavailableRedoPoint().indexNumber);
 
@@ -220,18 +222,18 @@ public class StateTrackerTest {
         st.receivePaintAction(new Draw(3,3,4,4,1,0,0,0,255, 0));
         st.receivePaintAction(new EndStroke(4,4,1,0));
 
-        assertEquals(Color.black, c.getColor(3,3));
-        assertEquals(Color.black, c.getColor(4,4));
-        assertEquals(Color.white, c.getColor(5,5));
-        assertEquals(Color.white, c.getColor(6,6));
+        assertEquals(BLACK, c.getColor(3,3));
+        assertEquals(BLACK, c.getColor(4,4));
+        assertEquals(TRANSPARENT, c.getColor(5,5));
+        assertEquals(TRANSPARENT, c.getColor(6,6));
 
-        st.cleanTimeline();
+        st.cleanTimeline(false);
 
         //nothing should have changed
-        assertEquals(Color.black, c.getColor(3,3));
-        assertEquals(Color.black, c.getColor(4,4));
-        assertEquals(Color.white, c.getColor(5,5));
-        assertEquals(Color.white, c.getColor(6,6));
+        assertEquals(BLACK, c.getColor(3,3));
+        assertEquals(BLACK, c.getColor(4,4));
+        assertEquals(TRANSPARENT, c.getColor(5,5));
+        assertEquals(TRANSPARENT, c.getColor(6,6));
 
 
 

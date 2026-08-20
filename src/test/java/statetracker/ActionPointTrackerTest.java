@@ -44,6 +44,7 @@ public class ActionPointTrackerTest {
 
     }
 
+    @Test
     public void redoTests() throws Exception {
         ActionPointTracker<Integer> apt = new ActionPointTracker<>();
         apt.addUndo(0);

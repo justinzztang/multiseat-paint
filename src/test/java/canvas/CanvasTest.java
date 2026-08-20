@@ -3,14 +3,20 @@ package canvas;
 import model.*;
 
 import model.constants.CanvasConstants;
+import model.helpers.DrawUtil;
 import org.junit.jupiter.api.Test;
 
-import java.awt.*;
 import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class CanvasTest {
+
+    private static final int TRANSPARENT = DrawUtil.EfficientColor.toColor(0, 0, 0, 0);
+
+    private static int rgba(int r, int g, int b, int a) {
+        return DrawUtil.EfficientColor.toColor(r, g, b, a);
+    }
 
     @Test
     public void basicConstruction(){
@@ -29,15 +35,15 @@ public class CanvasTest {
     @Test
     public void basicColoring(){
         COWTileCanvas c = new COWTileCanvas(1, 15, 15);
-        assertEquals(Color.white, c.getColor(0,0)); //sanity check
+        assertEquals(TRANSPARENT, c.getColor(0,0)); //sanity check
 
         c.setPixel(10,10, 123, 45, 67, 255);
-        assertEquals(new Color(123, 45, 67, 255), c.getColor(10,10)); //pixel is set to the right color
+        assertEquals(rgba(123, 45, 67, 255), c.getColor(10,10)); //pixel is set to the right color
         //nothing else is set to the color
-        assertEquals(Color.white, c.getColor(11,10));
-        assertEquals(Color.white, c.getColor(9,10));
-        assertEquals(Color.white, c.getColor(10,11));
-        assertEquals(Color.white, c.getColor(10,9));
+        assertEquals(TRANSPARENT, c.getColor(11,10));
+        assertEquals(TRANSPARENT, c.getColor(9,10));
+        assertEquals(TRANSPARENT, c.getColor(10,11));
+        assertEquals(TRANSPARENT, c.getColor(10,9));
 
 
     }
@@ -66,16 +72,6 @@ public class CanvasTest {
         assertSame(tl.get(0).second().getTile(0,1),tl.get(1).second().getTile(0,1));
         assertSame(tl.get(0).second().getTile(1,1),tl.get(1).second().getTile(1,1));
 
-        c.setPixel(10,10,255,255,255,255); //"fake" update
-        assertFalse(tl.get(1).first()[0][0]);
-        assertFalse(tl.get(1).first()[1][0]);
-        assertFalse(tl.get(1).first()[0][1]);
-        assertFalse(tl.get(1).first()[1][1]);
-        assertSame(tl.get(0).second().getTile(0,0),tl.get(1).second().getTile(0,0));
-        assertSame(tl.get(0).second().getTile(1,0),tl.get(1).second().getTile(1,0));
-        assertSame(tl.get(0).second().getTile(0,1),tl.get(1).second().getTile(0,1));
-        assertSame(tl.get(0).second().getTile(1,1),tl.get(1).second().getTile(1,1));
-
         c.setPixel(10,10,123,123,123,255); //update the first tile
 
         assertTrue(tl.get(1).first()[0][0]);
@@ -87,6 +83,17 @@ public class CanvasTest {
         assertSame(tl.get(0).second().getTile(1,0),tl.get(1).second().getTile(1,0));
         assertSame(tl.get(0).second().getTile(0,1),tl.get(1).second().getTile(0,1));
         assertSame(tl.get(0).second().getTile(1,1),tl.get(1).second().getTile(1,1));
+
+        c.copyTopLayer();
+        c.setPixel(10,10,123,123,123,255); //"fake" update
+        assertFalse(tl.get(2).first()[0][0]);
+        assertFalse(tl.get(2).first()[1][0]);
+        assertFalse(tl.get(2).first()[0][1]);
+        assertFalse(tl.get(2).first()[1][1]);
+        assertSame(tl.get(1).second().getTile(0,0),tl.get(2).second().getTile(0,0));
+        assertSame(tl.get(1).second().getTile(1,0),tl.get(2).second().getTile(1,0));
+        assertSame(tl.get(1).second().getTile(0,1),tl.get(2).second().getTile(0,1));
+        assertSame(tl.get(1).second().getTile(1,1),tl.get(2).second().getTile(1,1));
 
 
     }
@@ -102,16 +109,15 @@ public class CanvasTest {
         c.setPixel(40,40,123,123,123,255);
 
         int[][] image = c.getTop().toColorArray();
-        assertEquals(Color.white, image[0][0]);
-        assertEquals(new Color(123,123,123,255), image[10][10]);
-        assertEquals(new Color(123,123,123,255), image[10][40]);
-        assertEquals(new Color(123,123,123,255), image[70][10]);
-        assertEquals(new Color(123,123,123,255), image[10][100]);
-        assertEquals(new Color(123,123,123,255), image[10][10]);
-        assertEquals(new Color(123,123,123,255), image[40][40]);
+        assertEquals(TRANSPARENT, image[0][0]);
+        assertEquals(rgba(123,123,123,255), image[10][10]);
+        assertEquals(rgba(123,123,123,255), image[10][40]);
+        assertEquals(rgba(123,123,123,255), image[70][10]);
+        assertEquals(rgba(123,123,123,255), image[10][100]);
+        assertEquals(rgba(123,123,123,255), image[40][40]);
 
-        assertEquals(Color.white, c.getLayer(1).getColor(0,0));
-        assertEquals(new Color(123,123,123,255), c.getLayer(1).getColor(10,10));
+        assertEquals(TRANSPARENT, c.getLayer(1).getColor(0,0));
+        assertEquals(rgba(123,123,123,255), c.getLayer(1).getColor(10,10));
     }
 
     @Test
@@ -121,3 +127,4 @@ public class CanvasTest {
     }
 
 }
+
