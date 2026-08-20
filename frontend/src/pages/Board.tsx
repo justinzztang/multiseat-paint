@@ -264,7 +264,7 @@ function Board(){
 
                 client.subscribe("/update/whattoupdate", messageCallback);
 
-                client.subscribe("/user/update/whattoupdate", messageCallback,{"sentUserID":userID.toString()});
+                client.subscribe("/user/update/initialsync", messageCallback,{"sentUserID":userID.toString()});
 
                 function messageCallback(message: IMessage) {
                     try {
@@ -488,13 +488,13 @@ function Board(){
         () => {
             sendWebSocketMessage({type: "breakpoint", userID: userID});
         },[ sendWebSocketMessage, userID]
-    );*/
+    );
 
     const cleanUp = useCallback(
         () => {
             sendWebSocketMessage({type: "cleanUp", userID: userID});
         },[ sendWebSocketMessage, userID]
-    );
+    );*/
 
     const thicknessSlider = useCallback(
         (e:React.ChangeEvent<HTMLInputElement>) => {
@@ -515,7 +515,7 @@ function Board(){
                                     <button disabled={status==="Not Connected"} onClick={disconnect} className="w-[150px] h-[50px] disabled:cursor-not-allowed">Disconnect</button>
                                     <button className="w-[200px] h-[50px]">{status}</button>
                                     {/*<button onClick={breakpoint}>breakpoint</button>*/}
-                                    <button onClick={cleanUp}>clean</button>
+                                    {/*<button onClick={cleanUp}>clean</button>*/}
                                 </div>
                             </div>
                         </div>

@@ -119,7 +119,7 @@ public class COWTileCanvas implements LayeredCanvas<TiledCanvas>{
 
     @Override
     public void deleteLayer(int layer) {
-        tileLayers.subList(layer,layer).clear();
+        tileLayers.subList(layer,layer+1).clear();
     }
 
     @Override

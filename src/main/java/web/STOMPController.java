@@ -23,11 +23,10 @@ import web.helpers.DTO.ServerMessageDTO;
 import web.helpers.DTO.UserActionDTO;
 
 import java.util.*;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @Controller
 public class STOMPController {
-
-    private static final Object locker = new Object();
 
     private final SimpMessagingTemplate smt;
     public STOMPController(SimpMessagingTemplate smt){
@@ -69,15 +68,22 @@ public class STOMPController {
     @EventListener
     public void initialSync(SessionSubscribeEvent subEvent){
 
-        System.out.println("someone subscribed");
+        //System.out.println("someone subscribed");
 
-        Message<?> isolatedMessage;
+        Message<?> isolatedMessage = null;
 
-        synchronized (locker) {
-            isolatedMessage = MessageBuilder.createMessage(
-                subEvent.getMessage().getPayload(),
-                new MessageHeaders(new HashMap<>(subEvent.getMessage().getHeaders()))
-            );
+        for(int i=0;i<5;i++) {
+            try {
+                isolatedMessage = MessageBuilder.createMessage(
+                        subEvent.getMessage().getPayload(),
+                        new MessageHeaders(new HashMap<>(subEvent.getMessage().getHeaders()))
+                );
+                break;
+            } catch (ConcurrentModificationException e) {
+                if(i==4){
+                    throw e; //i legit dont know whats happening
+                }
+            }
         }
 
         StompHeaderAccessor headers = StompHeaderAccessor.wrap(isolatedMessage);
@@ -100,7 +106,7 @@ public class STOMPController {
         accessor.setSessionId(headers.getSessionId());
         accessor.setSubscriptionId(headers.getSubscriptionId());
 
-        smt.convertAndSendToUser(Objects.requireNonNull(headers.getSessionId()),"/update/whattoupdate", imageByteStream,accessor.getMessageHeaders());
+        smt.convertAndSendToUser(Objects.requireNonNull(headers.getSessionId()),"/update/initialsync", imageByteStream,accessor.getMessageHeaders());
 
         SimpMessageHeaderAccessor syncr = SimpMessageHeaderAccessor.create();
         syncr.setSessionId(headers.getSessionId());
@@ -115,8 +121,9 @@ public class STOMPController {
             }
         }
 
-        smt.convertAndSendToUser(headers.getSessionId(),"/update/whattoupdate", new ServerMessageDTO("IDAssignment",userID), syncr.getMessageHeaders());
+        smt.convertAndSendToUser(headers.getSessionId(),"/update/initialsync", new ServerMessageDTO("IDAssignment",userID), syncr.getMessageHeaders());
         PaintServer.stateTracker.uniqueUsers.getAndIncrement();
+        PaintServer.stateTracker.activeConnections.getAndIncrement();
 
     }
 

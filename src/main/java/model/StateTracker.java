@@ -25,14 +25,19 @@ public class StateTracker {
     /** The number of unique users that have sent an action to this stateTracker */
     public AtomicInteger uniqueUsers = new AtomicInteger(0);
 
+    public AtomicInteger activeConnections = new AtomicInteger(0);
+
     //state
 
     private int nodeCounter = 0;
 
     /** Doubly Linked List of index objects, each representing an integer index shared across multiple trackers */
-    public IndexTrackerDLLNode indexTrackerDLL = new IndexTrackerDLLNode(false,0, 0);
-    public IndexTrackerDLLNode indexTrackerHead = indexTrackerDLL; //should always be index 0
-    public IndexTrackerDLLNode indexTrackerEnd = indexTrackerDLL; //should always be index timeline.size()-1
+    private IndexTrackerDLLNode indexTrackerDLL = new IndexTrackerDLLNode(false,0, 0);
+    private IndexTrackerDLLNode indexTrackerHead = indexTrackerDLL; //should always be index 0
+    private IndexTrackerDLLNode indexTrackerEnd = indexTrackerDLL; //should always be index timeline.size()-1
+
+    private int undoPoints = 0;
+    private int redoPoints = 0;
 
     /** Stores the pixels of all "uncommitted" operations, such as selection or text, so they can sync with other users */
     private Canvas bufferLayers;
@@ -220,11 +225,12 @@ public class StateTracker {
 
 
                     canvas.copyTopLayer(); //creates a new layer on which everything will be applied, preserving the previous (before this copy) layer
-
+                    undoPoints++;
 
                 } else if (undoable.getPointType().equals(Undoable.PointType.REDOPOINT)) {
                     temp.isIndex = true;
                     apt.addRedo(temp);
+                    redoPoints++;
                 }
 
             }
@@ -245,7 +251,7 @@ public class StateTracker {
     /** Clean up the timeline, deleting inaccessible actions such as overwritten actions and those before any undo limits
      * Also deletes unreachable layers of the canvas
      */
-    public synchronized void cleanTimeline(){
+    public synchronized void cleanTimeline(boolean emergency){
 
         if(timeline.isEmpty()) return;
         stateLock.writeLock().lock();
@@ -254,7 +260,10 @@ public class StateTracker {
         try{
             ArrayList<PaintAction> filteredTimeline = new ArrayList<>();
 
-            int absMin = timeline.size() - CanvasConstants.MAX_TIMELINE_COMMANDS;
+            int absMin = timeline.size() - CanvasConstants.MAX_TIMELINE_SIZE;
+
+            int maxCommands = emergency ? CanvasConstants.EMERGENCY_MAX_COMMANDS_PER_USER : CanvasConstants.MAX_COMMANDS_PER_USER;
+            maxCommands *= Math.max(1,activeConnections.get());
 
             int earliestUndoLimit;
             ArrayList<Integer> indList = new ArrayList<>();
@@ -293,10 +302,11 @@ public class StateTracker {
                             //if theres an unavailable redo with no corresponding available undo, it will be fixed eventually
                             userIDDeleteList.remove(timeline.get(curIndex).getUserID());
                             actionPointTracker.get(timeline.get(curIndex).getUserID()).remove(node);
+                            redoPoints--;
                         }
                     }
                 }
-                else if(curIndex < absMin){ //do not add
+                else if(curIndex < absMin || undoPoints > maxCommands){ //do not add
                     add = false;
                     //splice out the node
                     node.spliceOut();
@@ -311,6 +321,7 @@ public class StateTracker {
                         if(undoable.getPointType()== Undoable.PointType.UNDOPOINT){
                             userIDDeleteList.add(timeline.get(curIndex).getUserID());
                             actionPointTracker.get(timeline.get(curIndex).getUserID()).remove(node);
+                            undoPoints--;
                         }
                     }
 
@@ -355,8 +366,14 @@ public class StateTracker {
 
             //find the first layer that doesnt need to be cleaned
             int firstSafeLayer=-1;
-            for(Map.Entry<IndexTrackerDLLNode, Integer> entry : pointToCanvasLayer.entrySet()){
-                if(!entry.getKey().deleted && firstSafeLayer==-1){
+            Iterator<Map.Entry<IndexTrackerDLLNode, Integer>> it = pointToCanvasLayer.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry<IndexTrackerDLLNode, Integer> entry = it.next();
+                if (entry.getKey().deleted) {
+                    it.remove();
+                    continue;
+                }
+                if (firstSafeLayer == -1) {
                     firstSafeLayer = entry.getValue();
                 }
                 if(firstSafeLayer >=0 ) pointToCanvasLayer.put(entry.getKey(), entry.getValue()-firstSafeLayer); //update the canvas layers

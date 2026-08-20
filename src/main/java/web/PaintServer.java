@@ -16,9 +16,4 @@ public class PaintServer {
         SpringApplication.run(PaintServer.class, args);
     }
 
-    @GetMapping("/canvas")
-    public String showCanvas() {
-        return canvas.toString();
-    }
-
 }

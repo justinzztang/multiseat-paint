@@ -180,27 +180,32 @@ public class DrawUtil {
         return EfficientColor.toColor(newR, newG, newB, newAlpha);
     }
 
-    public static void floodFill(int initialColor, int x, int y, Canvas canvas, ArrayList<Point> accumulator){
+    public static void floodFill(int initialColor, int x, int y, Canvas canvas, ArrayDeque<Integer> accumulator){
+
+        //points are represented as ints, where x is the first 16 bits, and y is the last 16 bits
 
         boolean[][] visited = new boolean[canvas.getHeight()][canvas.getWidth()];
 
-        Queue<Point> pointQueue = new LinkedList<>();
-        pointQueue.add(new Point(x,y));
+        Queue<Integer> pointQueue = new ArrayDeque<>();
+        pointQueue.add( (x<<16) + y );
         visited[y][x] = true;
 
         while(!pointQueue.isEmpty()){
-            Point p = pointQueue.poll();
+            int p = pointQueue.poll();
             accumulator.add(p);
 
             int[] dxs = {0,0,1,-1};
             int[] dys = {-1,1,0,0};
 
+            int px = (p >>> 16) & 65535;
+            int py = p & 65535;
+
             for(int i=0;i<4;i++){
-                if(p.x+dxs[i] < 0 || p.x+dxs[i] >= canvas.getWidth() || p.y+dys[i] < 0 || p.y+dys[i] >= canvas.getHeight()) continue;
-                if(canvas.getColor(p.x+dxs[i],p.y+dys[i]) != (initialColor)) continue;
-                if(visited[p.y+dys[i]][p.x+dxs[i]]) continue;
-                visited[p.y+dys[i]][p.x+dxs[i]] = true;
-                pointQueue.add(new Point(p.x+dxs[i],p.y+dys[i]));
+                if(px+dxs[i] < 0 || px+dxs[i] >= canvas.getWidth() || py+dys[i] < 0 || py+dys[i] >= canvas.getHeight()) continue;
+                if(canvas.getColor(px+dxs[i],py+dys[i]) != (initialColor)) continue;
+                if(visited[py+dys[i]][px+dxs[i]]) continue;
+                visited[py+dys[i]][px+dxs[i]] = true;
+                pointQueue.add( ((px+dxs[i])<<16) + (py+dys[i]));
             }
         }
     }

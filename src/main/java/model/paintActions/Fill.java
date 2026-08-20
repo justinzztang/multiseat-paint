@@ -6,6 +6,7 @@ import model.helpers.BoundingBox;
 import model.helpers.DrawUtil;
 
 import java.awt.*;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
@@ -46,15 +47,22 @@ public class Fill implements PaintAction, Undoable{
         if(status != UndoStatus.DONE) return;
         if( x < 0 || x > canvas.getWidth() || y < 0 || y > canvas.getHeight()) return;
 
-        ArrayList<Point> points = new ArrayList<>();
+        //points are represented as ints, where x is the first 16 bits, and y is the last 16 bits
+
+        ArrayDeque<Integer> points = new ArrayDeque<>();
         DrawUtil.floodFill(canvas.getColor(x,y), x,y,canvas,points);
 
-        for(Point p : points){
-            minX = Math.min(minX,p.x);
-            minY = Math.min(minY,p.y);
-            maxX = Math.max(maxX,p.x);
-            maxY = Math.max(maxY,p.y);
-            canvas.setPixel(p.x,p.y,r,g,b,a);
+        for(int p : points){
+            //System.out.println(p);
+
+            int px = (p >>> 16) & 65535;
+            int py = p & 65535;
+
+            minX = Math.min(minX,px);
+            minY = Math.min(minY,py);
+            maxX = Math.max(maxX,px);
+            maxY = Math.max(maxY,py);
+            canvas.setPixel(px,py,r,g,b,a);
         }
 
     }

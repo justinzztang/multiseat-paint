@@ -2,26 +2,31 @@ package web;
 
 import model.CanvasTile;
 import model.helpers.CanvasUtil;
+import model.helpers.MemoryEmergency;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MimeTypeUtils;
+import org.springframework.web.socket.config.WebSocketMessageBrokerStats;
 
 import java.awt.*;
 import java.util.Arrays;
+import java.util.Objects;
 
 
 @Service
 public class Syncer {
 
-
+    private final WebSocketMessageBrokerStats stats;
     private final SimpMessagingTemplate smt;
 
-    public Syncer(SimpMessagingTemplate smt){
+    public Syncer(SimpMessagingTemplate smt, WebSocketMessageBrokerStats stats){
+        this.stats = stats;
         this.smt = smt;
     }
 
@@ -49,10 +54,26 @@ public class Syncer {
     }
 
     @Scheduled(fixedRate= 10000)
-    public void collectGarbage(){
+    public void cleanup(){
 
-        PaintServer.stateTracker.cleanTimeline();
+        try{
+            int ac = Objects.requireNonNull(stats.getWebSocketSessionStats()).getWebSocketSessions();
+            PaintServer.stateTracker.activeConnections.set(ac);
+        }
+        catch(Exception _){
+            //just dont update
+        }
 
+        PaintServer.stateTracker.cleanTimeline(false);
+
+    }
+
+    @Scheduled(fixedRate=30000)
+    public void runGarbageCollection(){
+        if(MemoryEmergency.memoryEmergency()){
+            PaintServer.stateTracker.cleanTimeline(true);
+            System.out.println("Memory limit reached! Cleaning timeline...");
+        }
     }
 
 }

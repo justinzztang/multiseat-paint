@@ -51,6 +51,16 @@ public class TileCanvasImpl implements TiledCanvas{
         this.initCanvas(id, w, h);
     }
 
+    private TileCanvasImpl(int id, int w, int h, CanvasTile[][] oldCT){
+        this.id = id;
+        this.width = w;
+        this.height = h;
+        this.canvasTiles = new CanvasTile[(h + CanvasConstants.TILE_SIDE - 1)/CanvasConstants.TILE_SIDE][(w + CanvasConstants.TILE_SIDE - 1)/CanvasConstants.TILE_SIDE];
+        for(int y = 0; y < oldCT.length; y++){
+            System.arraycopy(oldCT[y], 0, this.canvasTiles[y], 0, oldCT[0].length);
+        }
+    }
+
     @Override
     public CanvasTile getTile(int tileX, int tileY) {
         return canvasTiles[tileY][tileX];
@@ -110,13 +120,7 @@ public class TileCanvasImpl implements TiledCanvas{
 
     @Override
     public TileCanvasImpl copy() {
-        TileCanvasImpl temp = new TileCanvasImpl(this.id, this.width, this.height);
-        for(int y = 0; y < canvasTiles.length; y++){
-            for(int x = 0; x < canvasTiles[0].length; x++){
-                temp.setTile(x, y, canvasTiles[y][x]);
-            }
-        }
-        return temp;
+        return new TileCanvasImpl(this.id, this.width, this.height, this.canvasTiles);
     }
 
     @Override
@@ -130,9 +134,8 @@ public class TileCanvasImpl implements TiledCanvas{
                 int tileHeight = Math.min(height-ty, CanvasConstants.TILE_SIDE);
 
                 for(int y=0; y< tileHeight; y++){
-                    for(int x=0; x<tileWidth;x++){
-                        tileColors[ty + y][tx + x] = canvasTiles[ty/CanvasConstants.TILE_SIDE][tx/CanvasConstants.TILE_SIDE].colorArray[y][x];
-                    }
+                    if (tileWidth >= 0)
+                        System.arraycopy(canvasTiles[ty / CanvasConstants.TILE_SIDE][tx / CanvasConstants.TILE_SIDE].colorArray[y], 0, tileColors[ty + y], tx + 0, tileWidth);
                 }
             }
         }
