@@ -245,12 +245,21 @@ function Board(){
     const getRandomHexColor = (): string =>
         `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
 
+    const buildURL = (): string => {
+        if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const host = import.meta.env.DEV
+            ? `${window.location.hostname}:8080`
+            : window.location.host;
+        return `${protocol}//${host}/update-websocket`;
+    };
+
     //problem
     const connectWebSocket = useCallback(() => {
         setStatus("Connecting...");
 
         const client = new Client({
-            brokerURL: `ws://${window.location.hostname}:8080/update-websocket`,
+            brokerURL: buildURL(),
             reconnectDelay: 5000,
             //debug: (str) => console.log("[stomp]", str),
             onConnect: () => {

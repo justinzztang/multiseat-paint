@@ -4,7 +4,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
 }
 
-version = "1.0-SNAPSHOT"
+version = "1.0.0"
 
 java {
     toolchain {
@@ -25,6 +25,16 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
 
+}
+
+tasks.jar {
+    manifest {
+        attributes["Main-Class"] = "web.PaintServer"
+    }
+    from({
+        configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }
+    })
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 tasks.test {
