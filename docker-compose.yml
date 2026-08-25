@@ -1,0 +1,18 @@
+services:
+  backend:
+    build:
+      context: docker
+      dockerfile: Dockerfile.backend
+    container_name: msp-backend
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xmx1g -XX:+UseG1GC"
+    expose:
+      - "8080"
+
+  frontend:
+    build:
+      context: docker
+      dockerfile: Dockerfile.frontend
+    container_name: msp-frontend
+    ports:
+      - "80:80"
